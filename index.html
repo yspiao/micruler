@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MICRULER - Custom EDO</title>
+    <title>MICRULER - Minimalist</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 全局极简黑 */
+        /* Global Minimalist Black */
         body { 
             background-color: #000000; 
             color: #f5f5f7; 
@@ -18,9 +18,10 @@
             margin: 0;
             overflow: hidden;
             letter-spacing: -0.02em; 
+            user-select: none;
         }
 
-        /* 顶部标题 - 极简 */
+        /* Top Label */
         .top-label {
             position: absolute;
             top: 2rem;
@@ -34,7 +35,7 @@
             z-index: 10;
         }
 
-        /* 底部悬浮中控台 (Dock) */
+        /* Bottom Dock */
         .bottom-dock {
             position: absolute;
             bottom: 2.5rem;
@@ -43,16 +44,22 @@
             display: flex;
             align-items: center;
             gap: 1.5rem;
-            background: rgba(10, 10, 10, 0.85);
+            background: rgba(10, 10, 10, 0.8);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             padding: 0.8rem 1.8rem;
             border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             box-shadow: 0 20px 40px rgba(0,0,0,0.8);
             z-index: 50;
             transition: opacity 0.2s;
+            white-space: nowrap;
+            max-width: 90vw;
+            overflow-x: auto;
         }
+        
+        /* Hide scrollbar for dock */
+        .bottom-dock::-webkit-scrollbar { display: none; }
 
         .control-group {
             display: flex;
@@ -63,32 +70,32 @@
 
         label {
             font-size: 0.5rem;
-            color: #555;
+            color: #444;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             margin-left: 0.2rem;
         }
 
-        /* 无框下拉菜单 */
+        /* Select */
         select {
             appearance: none;
             background-color: transparent;
             border: none;
-            color: #ccc;
+            color: #999;
             font-size: 0.8rem;
             font-weight: 500;
             cursor: pointer;
             padding-right: 1.2rem;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
             background-repeat: no-repeat;
             background-position: right center;
-            background-size: 0.7em;
+            background-size: 0.6em;
             transition: color 0.2s;
             min-width: 60px;
         }
         select:hover, select:focus { color: #fff; outline: none; }
 
-        /* 输入框 - 增强可见性 */
+        /* Input */
         input[type="number"] {
             background: rgba(255,255,255,0.05);
             border: none;
@@ -104,36 +111,51 @@
         }
         input[type="number"]:focus { border-color: #0a84ff; background: rgba(255,255,255,0.1); }
 
-        /* 分割线 */
+        /* Button Toggle */
+        .toggle-btn {
+            background: transparent;
+            border: none;
+            color: #999;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+            transition: color 0.2s;
+            padding: 0;
+            min-width: 40px;
+        }
+        .toggle-btn:hover { color: #fff; }
+
+        /* Divider */
         .divider {
             width: 1px;
             height: 16px;
-            background-color: rgba(255,255,255,0.1);
+            background-color: rgba(255,255,255,0.08);
+            flex-shrink: 0;
         }
 
-        /* 图例 (Legend) */
+        /* Legend */
         .legend-group {
             display: flex;
             gap: 0.8rem;
             padding-left: 0.5rem;
         }
-        .legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; color: #666; }
+        .legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; color: #555; }
         .dot { width: 4px; height: 4px; border-radius: 50%; }
 
-        /* 画布全屏 */
         #canvas-wrapper {
             width: 100%;
-            height: 100%; 
+            height: 100%;
             position: relative;
             cursor: crosshair;
         }
 
         canvas { display: block; }
 
-        /* 极简悬浮卡片 */
+        /* Tooltip */
         #tooltip {
             position: absolute;
-            background: rgba(10, 10, 10, 0.95);
+            background: rgba(5, 5, 5, 0.95);
             backdrop-filter: blur(10px);
             padding: 0.8rem 1rem;
             border-left: 2px solid #fff;
@@ -143,11 +165,11 @@
             font-size: 0.8rem;
             z-index: 20;
             min-width: 140px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
         }
 
         .tooltip-val { font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; }
-        .tooltip-row { display: flex; justify-content: space-between; margin-bottom: 0.3rem; color: #888; }
+        .tooltip-row { display: flex; justify-content: space-between; margin-bottom: 0.3rem; color: #666; }
 
     </style>
 </head>
@@ -162,18 +184,8 @@
 
     <!-- Unified Bottom Dock -->
     <div class="bottom-dock">
-        <div class="control-group">
-            <label>View</label>
-            <select id="view-select" onchange="updateDisplay()">
-                <option value="analyzer">Analyzer</option>
-                <option value="stack">Stack (7 Octaves)</option>
-                <option value="spiral">Spiral (1 Octave)</option>
-                <option value="linear">Linear Ruler</option>
-            </select>
-        </div>
+        <!-- Removed fixed "View" selector per request -->
         
-        <div class="divider"></div>
-
         <div class="control-group">
             <label>Ref (Base)</label>
             <select id="ref-select" onchange="updateTunings()">
@@ -195,19 +207,15 @@
         </div>
 
         <div class="divider"></div>
-
-        <div class="control-group" id="display-control">
-            <label>Display</label>
-            <select id="display-select" onchange="updateDisplay()">
-                <option value="cents">Cents</option>
-                <option value="ratio">Ratio</option>
-                <option value="both">Both (+Index)</option>
-            </select>
+        
+        <!-- Ratio Format Toggle -->
+        <div class="control-group">
+            <label>Ratio</label>
+            <button class="toggle-btn" id="fmt-btn" onclick="toggleRatioFormat()">Frac</button>
         </div>
 
         <div class="divider"></div>
 
-        <!-- Integrated Legend -->
         <div class="legend-group">
             <div class="legend-item"><span class="dot" style="background:#32d74b"></span>Match</div>
             <div class="legend-item"><span class="dot" style="background:#ff453a"></span>Sharp</div>
@@ -223,24 +231,26 @@
             "Pythagorean": [0, 113.69, 203.91, 294.13, 407.82, 498.04, 611.73, 701.96, 792.18, 905.87, 996.09, 1109.78, 1223.46], 
             "Meantone 1/4": [0, 76.0, 193.2, 310.3, 386.3, 503.4, 579.5, 696.6, 772.6, 889.7, 1006.8, 1082.9, 1200],
             "Werckmeister III": [0, 90.22, 192.18, 294.13, 390.22, 498.04, 588.27, 696.09, 792.18, 888.27, 996.09, 1092.18, 1200],
-            "Young No.2": [0, 94.14, 196.09, 298.05, 392.18, 501.96, 592.18, 700, 796.09, 894.14, 1000, 1094.14, 1200]
+            "Young No.2": [0, 94.14, 196.09, 298.05, 392.18, 501.96, 592.18, 700, 796.09, 894.14, 1000, 1094.14, 1200],
+            "Harmonic Series (16-32)": [0, 104.96, 203.91, 297.51, 386.31, 470.78, 551.32, 628.27, 701.96, 772.63, 840.53, 905.87, 968.83, 1029.58, 1088.27, 1145.04, 1200]
         };
 
         const tuningFractions = {
             "Just Intonation": ["1:1", "16:15", "9:8", "6:5", "5:4", "4:3", "45:32", "3:2", "8:5", "5:3", "16:9", "15:8", "2:1"],
-            "Pythagorean": ["1:1", "256:243", "9:8", "32:27", "81:64", "4:3", "729:512", "3:2", "128:81", "27:16", "16:9", "243:128", "531441:262144"]
+            "Pythagorean": ["1:1", "256:243", "9:8", "32:27", "81:64", "4:3", "729:512", "3:2", "128:81", "27:16", "16:9", "243:128", "531441:262144"],
+            "Harmonic Series (16-32)": ["1:1", "17:16", "9:8", "19:16", "5:4", "21:16", "11:8", "23:16", "3:2", "25:16", "13:8", "27:16", "7:4", "29:16", "15:8", "31:16", "2:1"]
         };
 
-        const fifthsChainNames = ["C", "G", "D", "A", "E", "B", "F#", "C#", "G#", "D#", "A#", "E#", "B#"];
         const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C'"];
         
         let currentRef = tunings["12-TET"];
         let currentTarget = tunings["Just Intonation"];
-        let displayMode = 'cents'; 
-        let viewMode = 'analyzer'; 
+        let displayMode = 'both'; 
+        let viewMode = 'analyzer'; // Locked to analyzer
         let selectedAnalysisIndex = 7; 
         
-        // Custom EDO Data Cache
+        let showDecimalRatio = false; 
+        
         let customRefEDO = null; 
         let customTargetEDO = null;
 
@@ -263,6 +273,13 @@
                 draw();
             });
             canvas.addEventListener('mousedown', handleClick);
+            
+            // Add touch support for mobile
+            canvas.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+                handleClick({ clientX: touch.clientX, clientY: touch.clientY });
+            }, {passive: false});
         }
 
         function populateSelects() {
@@ -290,12 +307,9 @@
             currentTarget = tunings["Pythagorean"];
         }
         
-        // Generate ALL steps for N-EDO
         function generateEDO(n) {
             const stepSize = 1200 / n;
             const centsArray = [];
-            // Generate full set: 0, 1, 2... n (inclusive of octave)
-            // Limit max points for safety
             const maxPoints = Math.min(n, 500); 
             for(let i=0; i<=maxPoints; i++) {
                 centsArray.push(i * stepSize);
@@ -331,15 +345,18 @@
                 customTargetEDO = null;
             }
             
-            // Reset selection to safe index
             selectedAnalysisIndex = Math.min(selectedAnalysisIndex, currentTarget.length - 1);
-            
             draw();
         }
 
         function updateDisplay() {
-            displayMode = document.getElementById('display-select').value;
-            viewMode = document.getElementById('view-select').value;
+            // Deprecated, mode always 'both'
+            draw();
+        }
+        
+        function toggleRatioFormat() {
+            showDecimalRatio = !showDecimalRatio;
+            document.getElementById('fmt-btn').innerText = showDecimalRatio ? 'Dec' : 'Frac';
             draw();
         }
 
@@ -380,14 +397,22 @@
         }
 
         function getRatioText(cents, index, targetKey) {
+            if (showDecimalRatio) {
+                 const decimalRatio = Math.pow(2, cents / 1200);
+                 return decimalRatio.toFixed(4);
+            }
+
             if (targetKey === "Custom EDO" && customTargetEDO) {
-                return `Step ${index}\\${customTargetEDO.n}`;
+                return `Step ${index}/${customTargetEDO.n}`;
             }
-            const decimalRatio = Math.pow(2, cents / 1200);
+            
             if (tuningFractions[targetKey] && tuningFractions[targetKey][index]) {
-                return tuningFractions[targetKey][index];
+                return tuningFractions[targetKey][index].replace(':', '/');
             }
-            return decimalRatio.toFixed(4);
+            
+            const decimalRatio = Math.pow(2, cents / 1200);
+            const rational = getRationalApproximation(decimalRatio, 5000);
+            return `${rational.n}/${rational.d}`;
         }
         
         function getLabelName(index, totalLength) {
@@ -429,23 +454,20 @@
 
         function draw() {
             ctx.clearRect(0, 0, width, height);
-            if (viewMode === 'analyzer') drawAnalyzer();
-            else if (viewMode === 'linear') drawLinear();
-            else if (viewMode === 'spiral') drawSpiral();
-            else if (viewMode === 'stack') drawStack();
+            drawAnalyzer();
         }
 
-        // --- COMPACT ANALYZER VIEW ---
+        // --- ANALYZER VIEW ---
         function drawAnalyzer() {
-            const contentTop = height * 0.25; 
-            const contentBottom = height * 0.80;
-            const totalH = contentBottom - contentTop;
+            // New Vertical Geometry: Moved UP
+            const rulerH = 80;
+            const rulerY = (height * 0.35) - (rulerH / 2); // Moved to 35% height
             
-            const rulerH = 80; 
-            const rulerY = contentTop;
-            const gap = 100;
+            const gap = 100; // 3cm gap
+            
             const graphY = rulerY + rulerH + gap;
-            const graphH = height - 120 - graphY;
+            const bottomMargin = 100; // Dock space
+            const graphH = height - bottomMargin - graphY;
             
             drawAnalyzerRuler(0, rulerY, width, rulerH);
 
@@ -476,8 +498,7 @@
             ctx.beginPath(); ctx.rect(x, y, w, h + 200); 
             ctx.clip();
             
-            // Axis in Middle
-            const axisY = y + h/2; 
+            const axisY = y + h/2; // Center of Ruler Area
             const maxCents = Math.max(1200, ...currentTarget);
             const scaleW = w * 0.9; 
             const padL = (w - scaleW)/2;
@@ -490,9 +511,8 @@
             currentRef.forEach((cents, i) => {
                 const px = centsToX(cents);
                 ctx.fillStyle = '#444'; ctx.fillRect(px-0.5, axisY-12, 1, 8);
-                // Sparse labels for dense refs
-                if (currentRef.length <= 20 || i % 5 === 0 || i === currentRef.length-1) {
-                    ctx.fillStyle = '#555'; ctx.font = '10px -apple-system'; ctx.textAlign = 'center';
+                ctx.fillStyle = '#555'; ctx.font = '10px -apple-system'; ctx.textAlign = 'center';
+                if (currentRef.length <= 20 || i%5===0 || i===currentRef.length-1) {
                     ctx.fillText(getLabelName(i, currentRef.length), px, axisY - 18);
                 }
             });
@@ -509,29 +529,26 @@
                 const color = getErrorColor(diff);
                 const isSelected = selectedAnalysisIndex === i;
                 const isHovered = hoveredIndex === i;
-                const shouldDrawLabel = isSelected || isHovered || (!isDense && (Math.abs(diff) > 2 || displayMode !== 'cents'));
                 
                 if (isSelected) {
-                    ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
-                    ctx.beginPath(); ctx.moveTo(px, axisY + 15); ctx.lineTo(px, height - 120); ctx.stroke(); 
-                    ctx.setLineDash([]);
+                    // No guide line as requested
                     ctx.fillStyle = '#fff'; ctx.fillRect(px-1.5, axisY-10, 3, 20);
                 } else if (isHovered) {
                     ctx.fillStyle = color; ctx.fillRect(px-1, axisY+2, 2, 16); 
                 } else {
-                    // Default Tick
                     ctx.fillStyle = color; ctx.fillRect(px-0.5, axisY+2, 1, 10); 
                 }
 
-                if (shouldDrawLabel) {
+                if (isSelected || isHovered || (!isDense && (Math.abs(diff) > 2 || displayMode !== 'cents'))) {
                      const txtColor = getTextColor(diff);
+                     // Label BELOW Axis
                      drawLabel(px, axisY + 30, diff, cents, i, targetKey, txtColor, isSelected || isHovered);
                 }
             });
             ctx.restore();
         }
 
-        // --- Cleaned up Combined Module ---
+        // --- Combined Module (Interference Only - No Ruler) ---
         function drawModule_Combined(x, y, w, h, rational, decimalRatio) {
             const f1 = 220; const f2 = f1 * decimalRatio;
             const pad = 40; const chartW = w - pad*2;
@@ -539,12 +556,13 @@
             const maxFreq = f1 * 12; 
             const freqToX = (f) => cx + (f/maxFreq) * chartW;
 
-            ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + chartW, cy); ctx.stroke();
-
+            // NO AXIS LINE drawn here
+            // Removed Interference Arcs (Red Lines) per request
+            /*
             const limit = 32; 
             let maxBeat = 0;
 
+            // Arcs Only
             ctx.strokeStyle = 'rgba(255, 69, 58, 0.4)'; 
             ctx.lineWidth = 1;
             for(let n=1; n<=limit; n++) {
@@ -560,15 +578,9 @@
                     }
                 }
             }
+            */
 
-            ctx.strokeStyle = '#444'; 
-            for(let i=1; i<=limit; i++) {
-                const px1 = freqToX(f1*i);
-                if(px1 < cx+chartW) { ctx.beginPath(); ctx.moveTo(px1, cy); ctx.lineTo(px1, cy - 8); ctx.stroke(); }
-                const px2 = freqToX(f2*i);
-                if(px2 < cx+chartW) { ctx.beginPath(); ctx.moveTo(px2, cy); ctx.lineTo(px2, cy + 8); ctx.stroke(); }
-            }
-
+            // --- Text Data (BOTTOM) ---
             const m = rational.n;
             const energy = (m <= 24) ? (100/m).toFixed(1) + "%" : "<4%";
             const textY = y + h - 10; 
@@ -585,184 +597,41 @@
             ctx.fillText("SIGNAL ENERGY", cx + chartW, textY - 25);
             ctx.fillStyle = '#fff'; ctx.font = '24px -apple-system';
             ctx.fillText(energy, cx + chartW, textY);
-
-            if(maxBeat > 0 && maxBeat < 20) {
-                ctx.textAlign = 'center';
-                ctx.fillStyle = '#ff453a'; ctx.font = '10px -apple-system';
-                ctx.fillText(`Max Beat ${maxBeat.toFixed(1)}Hz`, w/2, textY - 10);
-            }
-        }
-
-        // --- Standard Views ---
-        function drawLinear() {
-            const availableH = height - 120;
-            const axisY = availableH / 2;
-            const maxCents = Math.max(1200, ...currentTarget);
-            const scaleW = width * 0.9;
-            const padL = (width - scaleW)/2;
-            const centsToX = (c) => padL + (c / maxCents) * scaleW;
-
-            ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(padL + scaleW, axisY); ctx.stroke();
-
-            currentRef.forEach((cents, i) => {
-                const x = centsToX(cents);
-                ctx.fillStyle = '#444'; ctx.fillRect(x-0.5, axisY-10, 1, 8);
-                ctx.textAlign = 'center'; ctx.font = '10px -apple-system';
-                if (currentRef.length <= 20 || i%5===0 || i===currentRef.length-1) 
-                    ctx.fillText(getLabelName(i, currentRef.length), x, axisY - 20);
-            });
-
-            const isDense = currentTarget.length > 20;
-
-            currentTarget.forEach((cents, i) => {
-                let refCents;
-                if (currentTarget.length === currentRef.length) refCents = currentRef[i];
-                else refCents = getNearestRefCents(cents);
-
-                const xRef = centsToX(refCents);
-                const xTarget = centsToX(cents);
-                const diff = cents - refCents;
-                const color = getErrorColor(diff);
-                const isHovered = hoveredIndex === i;
-
-                if (isHovered) { 
-                    ctx.shadowColor = color; ctx.shadowBlur = 10; 
-                    ctx.fillStyle = color; ctx.fillRect(xTarget-1, axisY+2, 2, 20);
-                } else {
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = color; ctx.fillRect(xTarget-0.5, axisY+2, 1, 15);
-                }
-
-                if (Math.abs(diff) > 2) {
-                    ctx.strokeStyle = color; ctx.lineWidth = 1;
-                    ctx.beginPath(); ctx.moveTo(xRef, axisY); ctx.lineTo(xTarget, axisY+15); ctx.stroke();
-                }
-
-                if (isHovered || (!isDense && (Math.abs(diff) > 2 || displayMode !== 'cents'))) {
-                     const txtColor = getTextColor(diff);
-                     drawLabel(xTarget, axisY + 40, diff, cents, i, document.getElementById('target-select').value, txtColor, isHovered);
-                }
-            });
-            ctx.shadowBlur = 0;
-        }
-
-        // ... drawStack, drawSpiral ... (unchanged except for density checks on labels implied)
-        function drawStack() {
-            const availableH = height - 120;
-            const radiusBase = 40; const maxRadius = Math.min(width, availableH)/2 - 20; const maxCents = 1200*7;
-            const cyLocal = availableH / 2;
-            const getStackPos = (c) => {
-                const a = (c % 1200 / 1200) * Math.PI * 2 - Math.PI/2;
-                const r = radiusBase + (c / maxCents) * (maxRadius - radiusBase);
-                return { x: cx + Math.cos(a)*r, y: cyLocal + Math.sin(a)*r };
-            };
-            ctx.beginPath(); ctx.strokeStyle = '#111'; ctx.lineWidth = 1;
-            for(let i=0; i<=1000; i++) {
-                const p = getStackPos((i/1000)*maxCents);
-                if(i===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
-            }
-            ctx.stroke();
-            
-            // Calc Generators
-            // For EDOs, calculate generator approximation
-            let targetGen = 700; 
-            if (currentTarget.length > 13) {
-                 const fifthIndex = Math.round((currentTarget.length-1) * Math.log2(1.5));
-                 targetGen = currentTarget[fifthIndex];
-            } else {
-                 targetGen = currentTarget[7] || 700;
-            }
-            let refGen = 700;
-            if (currentRef.length > 13) {
-                 refGen = currentRef[Math.round((currentRef.length-1)*Math.log2(1.5))];
-            } else {
-                 refGen = currentRef[7] || 700;
-            }
-
-            for(let i=0; i<=12; i++) {
-                const c = i * targetGen; const cRef = i * refGen;
-                const p = getStackPos(c); const pRef = getStackPos(cRef);
-                const diff = c - cRef; const color = getErrorColor(diff);
-                const isHovered = hoveredIndex === i;
-                if (isHovered) { ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 15; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill(); } 
-                else { ctx.shadowBlur = 0; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill(); }
-                ctx.strokeStyle = color; ctx.lineWidth = isHovered ? 2 : 1;
-                ctx.beginPath(); ctx.moveTo(pRef.x, pRef.y); ctx.lineTo(p.x, p.y); ctx.stroke();
-                if (i===0 || i===12 || isHovered) {
-                    ctx.fillStyle = '#fff'; ctx.font = '10px -apple-system'; ctx.textAlign = 'center';
-                    const name = (i < fifthsChainNames.length) ? fifthsChainNames[i] : i;
-                    ctx.fillText(name, p.x + 10, p.y);
-                    if(i===12) { ctx.fillStyle = '#666'; ctx.fillText("Comma " + diff.toFixed(1), p.x + 10, p.y+12); }
-                }
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        function drawSpiral() {
-            const availableH = height - 120;
-            const radius = Math.min(width, availableH) * 0.35; 
-            const cyLocal = availableH / 2;
-            ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.arc(cx, cyLocal, radius, 0, Math.PI*2); ctx.stroke();
-            const getPos = (c, r) => {
-                const a = (c/1200)*Math.PI*2 - Math.PI/2;
-                return {x: cx + Math.cos(a)*r, y: cyLocal + Math.sin(a)*r, a: a};
-            };
-            currentRef.forEach((c, i) => {
-                // Sparse ref ticks for dense EDOs
-                if (currentRef.length > 20 && i % 2 !== 0) return;
-                const p = getPos(c, radius);
-                ctx.beginPath(); ctx.strokeStyle = '#333'; ctx.moveTo(cx, cyLocal); ctx.lineTo(p.x, p.y); ctx.stroke();
-            });
-            
-            const isDense = currentTarget.length > 20;
-            currentTarget.forEach((c, i) => {
-                const p = getPos(c, radius + (isHovered?10:0));
-                let refCents;
-                if (currentTarget.length === currentRef.length) refCents = currentRef[i];
-                else refCents = getNearestRefCents(c);
-                const diff = c - refCents;
-                const color = getErrorColor(diff);
-                const isHovered = hoveredIndex === i;
-                
-                ctx.fillStyle = color; ctx.shadowColor = isHovered?color:'transparent'; ctx.shadowBlur = isHovered?15:0;
-                ctx.beginPath(); ctx.arc(p.x, p.y, isHovered?4:2.5, 0, Math.PI*2); ctx.fill();
-                
-                const pRef = getPos(refCents, radius);
-                ctx.strokeStyle = color; ctx.lineWidth = 1;
-                ctx.beginPath(); ctx.moveTo(pRef.x, pRef.y); ctx.lineTo(p.x, p.y); ctx.stroke();
-                
-                if(isHovered || (!isDense && Math.abs(diff)>5)) {
-                    const labelPos = getPos(c, radius + 30);
-                    const txtColor = getTextColor(diff);
-                    drawLabel(labelPos.x, labelPos.y, diff, c, i, document.getElementById('target-select').value, txtColor, isHovered);
-                }
-            });
-            ctx.shadowBlur = 0;
         }
 
         function drawLabel(x, y, diff, cents, index, targetKey, color, isHovered) {
             ctx.textAlign = 'center'; ctx.textBaseline = 'top'; 
-            ctx.font = isHovered ? 'bold 12px -apple-system' : '500 10px -apple-system';
-            const centsLabel = (diff > 0 ? '+' : '') + diff.toFixed(1);
-            const ratioLabel = getRatioText(cents, index, targetKey);
             
+            const diffLabel = (diff > 0 ? '+' : '') + diff.toFixed(1);
+            const absLabel = cents.toFixed(1);
+            const ratioLabel = getRatioText(cents, index, targetKey);
+            const ci = getCoincidenceIndex(cents, index, targetKey);
+            
+            // Layout Order Requested: 
+            // 1. Ratio
+            // 2. Diff (Color)
+            // 3. Cents (Value)
+            // 4. C.I. (Coincidence Limit)
+            
+            // 1. Ratio (Top) - White
+            ctx.font = isHovered ? 'bold 12px -apple-system' : '500 11px -apple-system';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(ratioLabel, x, y);
+            
+            // 2. Diff (Middle-Top) - Colored
+            ctx.font = '10px -apple-system'; 
             ctx.fillStyle = color;
-            if (displayMode === 'cents') {
-                ctx.fillText(centsLabel, x, y); 
-            } else if (displayMode === 'ratio') {
-                ctx.fillText(ratioLabel, x, y); 
-            } else {
-                const ci = getCoincidenceIndex(cents, index, targetKey);
-                ctx.fillText(ratioLabel, x, y);
-                ctx.fillText(centsLabel, x, y + 14);
-                ctx.fillStyle = '#666'; ctx.font = '9px -apple-system';
-                ctx.fillText(`C.I. ${ci}`, x, y + 28);
-            }
+            ctx.fillText(diffLabel, x, y + 14);
+
+            // 3. Absolute Cents (Middle-Bottom) - Gray
+            ctx.fillStyle = '#bbb'; 
+            ctx.fillText(absLabel, x, y + 26);
+            
+            // 4. C.I. (Bottom) - Dark Gray
+            ctx.fillStyle = '#666'; ctx.font = '9px -apple-system';
+            ctx.fillText(`C.I. ${ci}`, x, y + 38);
         }
 
-        // --- Interaction ---
         function handleMouseMove(e) {
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
@@ -771,139 +640,43 @@
             
             if (mouseY > height - 80) return;
 
-            if (viewMode === 'analyzer') {
-                const contentTop = height * 0.25; 
-                const rulerH = 80;
-                const rulerY = contentTop;
-                
-                if (mouseY > rulerY - 20 && mouseY < rulerY + rulerH + 20) {
-                    const maxCents = Math.max(1200, ...currentTarget);
-                    const scaleW = width * 0.9;
-                    const padL = (width - scaleW)/2;
-                    let minDist = 20;
-                    currentTarget.forEach((cents, i) => {
-                        const x = padL + (cents/maxCents) * scaleW;
-                        if (Math.abs(mouseX - x) < minDist) { minDist = Math.abs(mouseX - x); foundIndex = i; }
-                    });
-                    if (foundIndex !== -1 && foundIndex !== hoveredIndex) { hoveredIndex = foundIndex; draw(); }
-                    if (foundIndex === -1 && hoveredIndex !== -1) { hoveredIndex = -1; draw(); }
-                    tooltip.style.opacity = 0;
-                    return;
-                }
-                return;
-            }
+            // Ruler Hit Test
+            const rulerH = 80;
+            const rulerY = (height * 0.35) - (rulerH / 2); // Matched new rulerY
             
-            // ... (Other hit tests same)
-            const availableH = height - 120;
-            const cyLocal = availableH / 2;
-
-            if (viewMode === 'linear') {
+            // Generous hit test for Ruler
+            if (mouseY > rulerY - 20 && mouseY < rulerY + rulerH + 50) {
                 const maxCents = Math.max(1200, ...currentTarget);
                 const scaleW = width * 0.9;
                 const padL = (width - scaleW)/2;
                 let minDist = 20;
                 currentTarget.forEach((cents, i) => {
-                    const x = padL + (cents / maxCents) * scaleW;
-                    if (Math.abs(mouseX - x) < minDist && Math.abs(mouseY - cyLocal) < 50) { minDist = Math.abs(mouseX - x); foundIndex = i; }
+                    const x = padL + (cents/maxCents) * scaleW;
+                    if (Math.abs(mouseX - x) < minDist) { minDist = Math.abs(mouseX - x); foundIndex = i; }
                 });
-            } else if (viewMode === 'spiral') {
-                 let angle = Math.atan2(mouseY - cyLocal, mouseX - cx); 
-                 let adjustedAngle = angle + Math.PI / 2;
-                 if (adjustedAngle < 0) adjustedAngle += Math.PI * 2;
-                 let minDiff = 50; 
-                 currentTarget.forEach((cents, i) => {
-                     let cAngle = (cents / 1200) * 2 * Math.PI;
-                     let cAngleNorm = cAngle % (2 * Math.PI);
-                     let diffAngle = Math.abs(cAngleNorm - adjustedAngle);
-                     if (diffAngle > Math.PI) diffAngle = 2*Math.PI - diffAngle;
-                     let diffCents = (diffAngle / (2*Math.PI)) * 1200;
-                     if (diffCents < minDiff) { minDiff = diffCents; foundIndex = i; }
-                 });
-            } else if (viewMode === 'stack') {
-                const radiusBase = 40; const maxRadius = Math.min(width, availableH)/2 - 20; const maxCents = 1200*7;
-                // Need dynamic generators for stack view interactions too
-                const targetGen = (currentTarget.length > 13) ? currentTarget[Math.round((currentTarget.length-1)*Math.log2(1.5))] : (currentTarget[7] || 700);
-
-                const getStackPos = (c) => {
-                    const angle = (c % 1200 / 1200) * Math.PI * 2 - Math.PI/2;
-                    const r = radiusBase + (c / maxCents) * (maxRadius - radiusBase);
-                    return { x: cx + Math.cos(angle) * r, y: cyLocal + Math.sin(angle) * r };
-                };
-                let minDist = 30;
-                for(let i=0; i<=12; i++) {
-                    const c = i * targetGen;
-                    const p = getStackPos(c);
-                    const dist = Math.sqrt((mouseX-p.x)**2 + (mouseY-p.y)**2);
-                    if(dist < minDist) { minDist = dist; foundIndex = i; }
-                }
+                if (foundIndex !== -1 && foundIndex !== hoveredIndex) { hoveredIndex = foundIndex; draw(); }
+                if (foundIndex === -1 && hoveredIndex !== -1) { hoveredIndex = -1; draw(); }
+                tooltip.style.opacity = 0;
+                return;
             }
-
-            if (foundIndex !== hoveredIndex) {
-                hoveredIndex = foundIndex;
-                draw();
-            }
-            if (hoveredIndex !== -1) updateTooltip(e.clientX, e.clientY, hoveredIndex);
-            else tooltip.style.opacity = 0;
         }
 
-        // ... Tooltip, Click, Audio logic ...
-        function updateTooltip(x, y, index) {
-            let refVal, targetVal, noteName;
-            let targetKey = document.getElementById('target-select').value;
-
-            if (viewMode === 'stack') {
-                const refGen = (currentRef.length > 13) ? currentRef[Math.round((currentRef.length-1)*Math.log2(1.5))] : (currentRef[7] || 700);
-                const targetGen = (currentTarget.length > 13) ? currentTarget[Math.round((currentTarget.length-1)*Math.log2(1.5))] : (currentTarget[7] || 700);
-                targetVal = index * targetGen; refVal = index * refGen;
-                noteName = fifthsChainNames[index];
-            } else {
-                targetVal = currentTarget[index];
-                if (currentTarget.length === currentRef.length) refVal = currentRef[index];
-                else refVal = getNearestRefCents(targetVal);
-                noteName = getLabelName(index, currentTarget.length);
-            }
-            const diff = targetVal - refVal;
-            const color = getErrorColor(diff); 
-            const ratioText = getRatioText(targetVal, index, targetKey);
-            const ci = getCoincidenceIndex(targetVal, index, targetKey);
-
-            tooltip.innerHTML = `
-                <div style="font-weight:600; color:#fff; font-size:1rem; margin-bottom:0.5rem">${noteName}</div>
-                <div class="tooltip-row"><span>Ref</span> <span class="tooltip-val">${refVal.toFixed(1)}</span></div>
-                <div class="tooltip-row"><span>Target</span> <span class="tooltip-val">${targetVal.toFixed(1)}</span></div>
-                <div class="tooltip-row"><span>Ratio</span> <span class="tooltip-val" style="color:${color}">${ratioText}</span></div>
-                <div class="tooltip-row"><span>C.I.</span> <span class="tooltip-val">${ci}</span></div>
-                <div class="tooltip-row" style="margin-top:0.5rem; border-top:1px solid #333; padding-top:0.5rem">
-                    <span>Error</span> <span class="tooltip-val" style="color:${color}">${(diff>0?'+':'')+diff.toFixed(2)}</span>
-                </div>
-            `;
-            let left = x + 15; let top = y + 15;
-            if (left + 180 > width) left = x - 195;
-            if (top + 150 > height) top = y - 165;
-            tooltip.style.left = left + 'px'; tooltip.style.top = top + 'px';
-            tooltip.style.opacity = 1;
-        }
-
-        function handleClick() {
+        function handleClick(e) {
             if (hoveredIndex === -1) return;
-            if (viewMode === 'analyzer') { selectedAnalysisIndex = hoveredIndex; draw(); }
+            selectedAnalysisIndex = hoveredIndex; 
+            draw();
             playToneComparison(hoveredIndex);
         }
-
+        
         function playToneComparison(index) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const baseFreq = 261.63; 
             let centsRef, centsTarget;
-            if (viewMode === 'stack') {
-                const refGen = (currentRef.length > 13) ? currentRef[Math.round((currentRef.length-1)*Math.log2(1.5))] : (currentRef[7] || 700);
-                const targetGen = (currentTarget.length > 13) ? currentTarget[Math.round((currentTarget.length-1)*Math.log2(1.5))] : (currentTarget[7] || 700);
-                centsRef = index * refGen; 
-                centsTarget = index * targetGen;
-            } else {
-                centsTarget = currentTarget[index];
-                if (currentTarget.length === currentRef.length) centsRef = currentRef[index];
-                else centsRef = getNearestRefCents(centsTarget);
-            }
+            // Always Analyzer mode logic
+            centsTarget = currentTarget[index];
+            if (currentTarget.length === currentRef.length) centsRef = currentRef[index];
+            else centsRef = getNearestRefCents(centsTarget);
+            
             const f1 = baseFreq * Math.pow(2, centsRef / 1200);
             const f2 = baseFreq * Math.pow(2, centsTarget / 1200);
             playOsc(f1, 'sine', 0, 0.5); playOsc(f2, 'triangle', 0, 0.5); 
