@@ -28,7 +28,7 @@
             left: 2rem;
             font-size: 0.8rem;
             font-weight: 600;
-            color: #333; 
+            color: #555; /* Slightly brightened from #333 for better visibility */
             text-transform: uppercase;
             letter-spacing: 0.2em;
             pointer-events: none;
@@ -44,13 +44,8 @@
             display: flex;
             align-items: center;
             gap: 1.5rem;
-            background: rgba(10, 10, 10, 0.8);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: transparent;
             padding: 0.8rem 1.8rem;
-            border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
             z-index: 50;
             transition: opacity 0.2s;
             white-space: nowrap;
@@ -70,7 +65,7 @@
 
         label {
             font-size: 0.5rem;
-            color: #444;
+            color: #888; /* Brightened from #444 */
             text-transform: uppercase;
             letter-spacing: 0.05em;
             margin-left: 0.2rem;
@@ -81,12 +76,12 @@
             appearance: none;
             background-color: transparent;
             border: none;
-            color: #999;
+            color: #bbb; /* Brightened from #999 */
             font-size: 0.8rem;
             font-weight: 500;
             cursor: pointer;
             padding-right: 1.2rem;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
             background-repeat: no-repeat;
             background-position: right center;
             background-size: 0.6em;
@@ -99,7 +94,7 @@
         input[type="number"] {
             background: rgba(255,255,255,0.05);
             border: none;
-            border-bottom: 1px solid #666;
+            border-bottom: 1px solid #888; /* Brightened from #666 */
             color: #fff;
             width: 50px;
             font-size: 0.8rem;
@@ -115,7 +110,7 @@
         .toggle-btn {
             background: transparent;
             border: none;
-            color: #999;
+            color: #bbb;
             font-size: 0.8rem;
             font-weight: 500;
             cursor: pointer;
@@ -130,18 +125,9 @@
         .divider {
             width: 1px;
             height: 16px;
-            background-color: rgba(255,255,255,0.08);
+            background-color: rgba(255,255,255,0.15); /* Slightly more visible */
             flex-shrink: 0;
         }
-
-        /* Legend */
-        .legend-group {
-            display: flex;
-            gap: 0.8rem;
-            padding-left: 0.5rem;
-        }
-        .legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; color: #555; }
-        .dot { width: 4px; height: 4px; border-radius: 50%; }
 
         #canvas-wrapper {
             width: 100%;
@@ -155,7 +141,7 @@
         /* Tooltip */
         #tooltip {
             position: absolute;
-            background: rgba(5, 5, 5, 0.95);
+            background: rgba(15, 15, 15, 0.95); /* Slightly lighter background */
             backdrop-filter: blur(10px);
             padding: 0.8rem 1rem;
             border-left: 2px solid #fff;
@@ -169,8 +155,29 @@
         }
 
         .tooltip-val { font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; }
-        .tooltip-row { display: flex; justify-content: space-between; margin-bottom: 0.3rem; color: #666; }
+        .tooltip-row { display: flex; justify-content: space-between; margin-bottom: 0.3rem; color: #999; }
 
+        /* Keyboard hint styles */
+        .keyboard-hint {
+            position: absolute;
+            bottom: 6rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.65rem;
+            color: #666;
+            letter-spacing: 0.05em;
+            pointer-events: none;
+            display: flex;
+            gap: 1rem;
+            opacity: 0.7;
+        }
+        .key-tag {
+            background: rgba(255,255,255,0.1);
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            color: #aaa;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -181,21 +188,27 @@
         <canvas id="rulerCanvas"></canvas>
         <div id="tooltip"></div>
     </div>
+    
+    <div class="keyboard-hint">
+        <span><span class="key-tag">▲</span> <span class="key-tag">▼</span> Select Track</span>
+        <span><span class="key-tag">◀</span> <span class="key-tag">▶</span> Move & Play</span>
+    </div>
 
     <!-- Unified Bottom Dock -->
     <div class="bottom-dock">
-        <!-- Removed fixed "View" selector per request -->
-        
+        <!-- Hidden input for SCL file upload -->
+        <input type="file" id="scl-file-input" accept=".scl" style="display: none;" onchange="handleSclUpload(event)">
+
         <div class="control-group">
             <label>Ref (Base)</label>
-            <select id="ref-select" onchange="updateTunings()">
+            <select id="ref-select" onchange="updateTunings('ref')">
                 <!-- Populated by JS -->
             </select>
         </div>
 
         <div class="control-group">
             <label>Target</label>
-            <select id="target-select" onchange="updateTunings()">
+            <select id="target-select" onchange="updateTunings('target')">
                 <!-- Populated by JS -->
             </select>
         </div>
@@ -210,16 +223,8 @@
         
         <!-- Ratio Format Toggle -->
         <div class="control-group">
-            <label>Ratio</label>
-            <button class="toggle-btn" id="fmt-btn" onclick="toggleRatioFormat()">Frac</button>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="legend-group">
-            <div class="legend-item"><span class="dot" style="background:#32d74b"></span>Match</div>
-            <div class="legend-item"><span class="dot" style="background:#ff453a"></span>Sharp</div>
-            <div class="legend-item"><span class="dot" style="background:#0a84ff"></span>Flat</div>
+            <label>&nbsp;</label>
+            <button class="toggle-btn" id="fmt-btn" onclick="toggleRatioFormat()">Ratio</button>
         </div>
     </div>
 
@@ -244,21 +249,30 @@
         const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C'"];
         
         let currentRef = tunings["12-TET"];
-        let currentTarget = tunings["Just Intonation"];
+        let currentTarget = tunings["Pythagorean"];
         let displayMode = 'both'; 
-        let viewMode = 'analyzer'; // Locked to analyzer
-        let selectedAnalysisIndex = 7; 
+        let viewMode = 'analyzer';
+        
+        // NEW STATE FOR TRACK SELECTION
+        let activeTrack = 'target'; // 'ref' or 'target'
+        let selectedRefIndex = 0;
+        let selectedTargetIndex = 7;
         
         let showDecimalRatio = false; 
         
         let customRefEDO = null; 
         let customTargetEDO = null;
+        
+        let activeSclTarget = null;
+        let prevRefKey = "12-TET";
+        let prevTargetKey = "Pythagorean";
 
         const canvas = document.getElementById('rulerCanvas');
         const ctx = canvas.getContext('2d');
         const tooltip = document.getElementById('tooltip');
         let width, height, cx, cy;
         
+        let hoveredTrack = null;
         let hoveredIndex = -1; 
         let audioCtx;
 
@@ -266,8 +280,11 @@
             populateSelects();
             resize();
             window.addEventListener('resize', resize);
+            
+            // Mouse & Touch events
             canvas.addEventListener('mousemove', handleMouseMove);
             canvas.addEventListener('mouseleave', () => {
+                hoveredTrack = null;
                 hoveredIndex = -1;
                 tooltip.style.opacity = 0;
                 draw();
@@ -280,6 +297,62 @@
                 handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
                 handleClick({ clientX: touch.clientX, clientY: touch.clientY });
             }, {passive: false});
+
+            // Keyboard events
+            window.addEventListener('keydown', handleKeyDown);
+        }
+
+        function handleKeyDown(e) {
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
+
+            const isArrowKey = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key);
+            if (isArrowKey) e.preventDefault();
+
+            let changed = false;
+            let play = false;
+
+            if (e.key === 'ArrowUp') {
+                if (activeTrack !== 'ref') {
+                    activeTrack = 'ref';
+                    // Align cursor to the nearest ref note
+                    const targetCents = currentTarget[selectedTargetIndex];
+                    let minDiff = Infinity, bestIdx = 0;
+                    currentRef.forEach((c, i) => {
+                        if (Math.abs(c - targetCents) < minDiff) { minDiff = Math.abs(c - targetCents); bestIdx = i; }
+                    });
+                    selectedRefIndex = bestIdx;
+                    changed = true;
+                    play = true; // 切换轨道时也播放
+                }
+            } else if (e.key === 'ArrowDown') {
+                if (activeTrack !== 'target') {
+                    activeTrack = 'target';
+                    // Align cursor to the nearest target note
+                    const refCents = currentRef[selectedRefIndex];
+                    let minDiff = Infinity, bestIdx = 0;
+                    currentTarget.forEach((c, i) => {
+                        if (Math.abs(c - refCents) < minDiff) { minDiff = Math.abs(c - refCents); bestIdx = i; }
+                    });
+                    selectedTargetIndex = bestIdx;
+                    changed = true;
+                    play = true; // 切换轨道时也播放
+                }
+            } else if (e.key === 'ArrowLeft') {
+                if (activeTrack === 'ref' && selectedRefIndex > 0) {
+                    selectedRefIndex--; changed = true; play = true;
+                } else if (activeTrack === 'target' && selectedTargetIndex > 0) {
+                    selectedTargetIndex--; changed = true; play = true;
+                }
+            } else if (e.key === 'ArrowRight') {
+                if (activeTrack === 'ref' && selectedRefIndex < currentRef.length - 1) {
+                    selectedRefIndex++; changed = true; play = true;
+                } else if (activeTrack === 'target' && selectedTargetIndex < currentTarget.length - 1) {
+                    selectedTargetIndex++; changed = true; play = true;
+                }
+            }
+
+            if (changed) draw();
+            if (play) playActiveTone();
         }
 
         function populateSelects() {
@@ -299,9 +372,17 @@
             customOpt.text = "Custom EDO...";
             targetSel.add(customOpt.cloneNode(true));
             refSel.add(customOpt);
+
+            let sclOpt = document.createElement('option');
+            sclOpt.value = "Load SCL";
+            sclOpt.text = "Load .scl File...";
+            targetSel.add(sclOpt.cloneNode(true));
+            refSel.add(sclOpt);
             
             refSel.value = "12-TET";
             targetSel.value = "Pythagorean";
+            prevRefKey = "12-TET";
+            prevTargetKey = "Pythagorean";
             
             currentRef = tunings["12-TET"];
             currentTarget = tunings["Pythagorean"];
@@ -317,9 +398,28 @@
             return { n: n, array: centsArray };
         }
 
-        function updateTunings() {
-            const refKey = document.getElementById('ref-select').value;
-            const targetKey = document.getElementById('target-select').value;
+        function updateTunings(triggerSource) {
+            const refSel = document.getElementById('ref-select');
+            const targetSel = document.getElementById('target-select');
+            let refKey = refSel.value;
+            let targetKey = targetSel.value;
+
+            if (triggerSource === 'ref' && refKey === "Load SCL") {
+                activeSclTarget = 'ref';
+                document.getElementById('scl-file-input').click();
+                refSel.value = prevRefKey; 
+                return;
+            }
+            if (triggerSource === 'target' && targetKey === "Load SCL") {
+                activeSclTarget = 'target';
+                document.getElementById('scl-file-input').click();
+                targetSel.value = prevTargetKey; 
+                return;
+            }
+
+            prevRefKey = refKey;
+            prevTargetKey = targetKey;
+
             const edoInputGroup = document.getElementById('edo-group');
             const customN = parseFloat(document.getElementById('edo-input').value) || 31;
 
@@ -345,18 +445,93 @@
                 customTargetEDO = null;
             }
             
-            selectedAnalysisIndex = Math.min(selectedAnalysisIndex, currentTarget.length - 1);
+            selectedRefIndex = Math.min(selectedRefIndex, currentRef.length - 1);
+            selectedTargetIndex = Math.min(selectedTargetIndex, currentTarget.length - 1);
             draw();
         }
 
-        function updateDisplay() {
-            // Deprecated, mode always 'both'
-            draw();
+        // Standard SCL File Parser
+        function parseSCL(text) {
+            const lines = text.split('\n').map(l => l.trim());
+            const dataLines = lines.filter(l => l.length > 0 && !l.startsWith('!'));
+            if(dataLines.length < 2) throw new Error("Invalid SCL");
+            
+            let description = dataLines[0];
+            const numNotes = parseInt(dataLines[1]);
+            const centsArray = [0]; 
+
+            for(let i = 0; i < numNotes; i++) {
+                const val = dataLines[2 + i];
+                if(!val) continue; 
+                const token = val.split(/\s+/)[0]; 
+                if(token.includes('.')) {
+                    centsArray.push(parseFloat(token));
+                } else {
+                    let n, d;
+                    if(token.includes('/')) {
+                        const parts = token.split('/');
+                        n = parseInt(parts[0]);
+                        d = parseInt(parts[1]);
+                    } else {
+                        n = parseInt(token);
+                        d = 1;
+                    }
+                    centsArray.push(1200 * Math.log2(n/d));
+                }
+            }
+            if (description.length > 20) description = description.substring(0, 20) + '...';
+            return { name: description, array: centsArray };
+        }
+
+        function handleSclUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const parsed = parseSCL(evt.target.result);
+                    let name = parsed.name || file.name.replace('.scl', '');
+                    
+                    let counter = 1;
+                    let uniqueName = name;
+                    while(tunings[uniqueName]) {
+                        uniqueName = `${name} (${counter})`;
+                        counter++;
+                    }
+                    tunings[uniqueName] = parsed.array;
+
+                    const refSel = document.getElementById('ref-select');
+                    const targetSel = document.getElementById('target-select');
+                    
+                    const opt1 = document.createElement('option');
+                    opt1.value = uniqueName; opt1.text = uniqueName;
+                    const opt2 = document.createElement('option');
+                    opt2.value = uniqueName; opt2.text = uniqueName;
+
+                    refSel.insertBefore(opt1, refSel.options[refSel.options.length-2]);
+                    targetSel.insertBefore(opt2, targetSel.options[targetSel.options.length-2]);
+
+                    if (activeSclTarget === 'ref') {
+                        refSel.value = uniqueName;
+                        prevRefKey = uniqueName;
+                    } else if (activeSclTarget === 'target') {
+                        targetSel.value = uniqueName;
+                        prevTargetKey = uniqueName;
+                    }
+                    updateTunings(); 
+                } catch (err) {
+                    alert("Invalid or unsupported .scl file format.");
+                    console.error(err);
+                } finally {
+                    e.target.value = ''; 
+                }
+            };
+            reader.readAsText(file);
         }
         
         function toggleRatioFormat() {
             showDecimalRatio = !showDecimalRatio;
-            document.getElementById('fmt-btn').innerText = showDecimalRatio ? 'Dec' : 'Frac';
+            document.getElementById('fmt-btn').innerText = showDecimalRatio ? 'Decimal' : 'Ratio';
             draw();
         }
 
@@ -370,6 +545,7 @@
 
         function gcd(a, b) { return !b ? a : gcd(b, a % b); }
         function lcm(a, b) { return (a * b) / gcd(a, b); }
+        
         function getRationalApproximation(decimal, limit = 5000) {
             let n1 = 1, d1 = 0, n2 = 0, d2 = 1, x = decimal;
             while(true) {
@@ -457,27 +633,25 @@
             drawAnalyzer();
         }
 
-        // --- ANALYZER VIEW ---
         function drawAnalyzer() {
-            // New Vertical Geometry: Moved UP
             const rulerH = 80;
-            const rulerY = (height * 0.35) - (rulerH / 2); // Moved to 35% height
+            const rulerY = (height * 0.35) - (rulerH / 2); 
             
-            const gap = 100; // 3cm gap
+            const gap = 100; 
             
             const graphY = rulerY + rulerH + gap;
-            const bottomMargin = 100; // Dock space
+            const bottomMargin = 100; 
             const graphH = height - bottomMargin - graphY;
             
             drawAnalyzerRuler(0, rulerY, width, rulerH);
 
-            const targetKey = document.getElementById('target-select').value;
-            const cents = currentTarget[selectedAnalysisIndex];
+            const activeKey = activeTrack === 'ref' ? document.getElementById('ref-select').value : document.getElementById('target-select').value;
+            const cents = activeTrack === 'ref' ? currentRef[selectedRefIndex] : currentTarget[selectedTargetIndex];
             const decimalRatio = Math.pow(2, cents/1200);
             
             let rational = null;
-            if (targetKey !== "Custom EDO" && tuningFractions[targetKey] && tuningFractions[targetKey][selectedAnalysisIndex]) {
-                const fracStr = tuningFractions[targetKey][selectedAnalysisIndex];
+            if (activeKey !== "Custom EDO" && tuningFractions[activeKey] && tuningFractions[activeKey][activeTrack === 'ref' ? selectedRefIndex : selectedTargetIndex]) {
+                const fracStr = tuningFractions[activeKey][activeTrack === 'ref' ? selectedRefIndex : selectedTargetIndex];
                 if (fracStr.includes(':')) {
                     const parts = fracStr.split(':');
                     const n = parseInt(parts[0]);
@@ -495,25 +669,50 @@
 
         function drawAnalyzerRuler(x, y, w, h) {
             ctx.save();
-            ctx.beginPath(); ctx.rect(x, y, w, h + 200); 
+            // 向上扩展裁剪区域，防止顶部的信息标签被切掉
+            ctx.beginPath(); ctx.rect(x, y - 120, w, h + 250); 
             ctx.clip();
             
-            const axisY = y + h/2; // Center of Ruler Area
-            const maxCents = Math.max(1200, ...currentTarget);
+            const axisY = y + h/2; 
+            const maxCentsTarget = Math.max(1200, ...currentTarget);
+            const maxCentsRef = Math.max(1200, ...currentRef);
+            const maxCents = Math.max(maxCentsTarget, maxCentsRef); // Ensure both share the same scale
             const scaleW = w * 0.9; 
             const padL = (w - scaleW)/2;
             const centsToX = (c) => padL + (c / maxCents) * scaleW;
 
-            ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
+            const refKey = document.getElementById('ref-select').value;
+
+            // Increased contrast for the axis line
+            ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(padL + scaleW, axisY); ctx.stroke();
 
             // Ref (Ticks UP)
             currentRef.forEach((cents, i) => {
                 const px = centsToX(cents);
-                ctx.fillStyle = '#444'; ctx.fillRect(px-0.5, axisY-12, 1, 8);
-                ctx.fillStyle = '#555'; ctx.font = '10px -apple-system'; ctx.textAlign = 'center';
-                if (currentRef.length <= 20 || i%5===0 || i===currentRef.length-1) {
-                    ctx.fillText(getLabelName(i, currentRef.length), px, axisY - 18);
+                const isSelected = (activeTrack === 'ref' && selectedRefIndex === i);
+                const isHovered = (hoveredTrack === 'ref' && hoveredIndex === i);
+                
+                if (isSelected) {
+                    ctx.fillStyle = '#fff'; ctx.fillRect(px-1.5, axisY-20, 3, 20);
+                } else if (isHovered) {
+                    ctx.fillStyle = '#aaa'; ctx.fillRect(px-1, axisY-16, 2, 16);
+                } else {
+                    ctx.fillStyle = '#888'; ctx.fillRect(px-0.5, axisY-12, 1, 8);
+                }
+
+                // Brightened text labels (C, C#, etc.)
+                ctx.fillStyle = (isSelected || isHovered) ? '#fff' : '#bbb'; 
+                ctx.font = (isSelected || isHovered) ? 'bold 10px -apple-system' : '10px -apple-system'; 
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom'; // 确保顶部标签按底部对齐
+                if (currentRef.length <= 20 || i%5===0 || i===currentRef.length-1 || isSelected || isHovered) {
+                    ctx.fillText(getLabelName(i, currentRef.length), px, axisY - (isSelected ? 24 : 20));
+                }
+
+                // 添加上半部分选中状态的详细信息 (Ratio, Cents, C.I.)
+                if (isSelected || isHovered) {
+                    drawLabelUp(px, axisY - 40, cents, i, refKey, isSelected || isHovered);
                 }
             });
 
@@ -527,73 +726,45 @@
                 else diff = cents - getNearestRefCents(cents);
 
                 const color = getErrorColor(diff);
-                const isSelected = selectedAnalysisIndex === i;
-                const isHovered = hoveredIndex === i;
+                const isSelected = (activeTrack === 'target' && selectedTargetIndex === i);
+                const isHovered = (hoveredTrack === 'target' && hoveredIndex === i);
                 
                 if (isSelected) {
-                    // No guide line as requested
-                    ctx.fillStyle = '#fff'; ctx.fillRect(px-1.5, axisY-10, 3, 20);
+                    ctx.fillStyle = '#fff'; ctx.fillRect(px-1.5, axisY, 3, 20);
                 } else if (isHovered) {
-                    ctx.fillStyle = color; ctx.fillRect(px-1, axisY+2, 2, 16); 
+                    ctx.fillStyle = color; ctx.fillRect(px-1, axisY, 2, 16); 
                 } else {
-                    ctx.fillStyle = color; ctx.fillRect(px-0.5, axisY+2, 1, 10); 
+                    ctx.fillStyle = color; ctx.fillRect(px-0.5, axisY, 1, 10); 
                 }
 
                 if (isSelected || isHovered || (!isDense && (Math.abs(diff) > 2 || displayMode !== 'cents'))) {
                      const txtColor = getTextColor(diff);
-                     // Label BELOW Axis
                      drawLabel(px, axisY + 30, diff, cents, i, targetKey, txtColor, isSelected || isHovered);
                 }
             });
             ctx.restore();
         }
 
-        // --- Combined Module (Interference Only - No Ruler) ---
         function drawModule_Combined(x, y, w, h, rational, decimalRatio) {
             const f1 = 220; const f2 = f1 * decimalRatio;
             const pad = 40; const chartW = w - pad*2;
             const cx = x + pad; const cy = y + 20; 
             const maxFreq = f1 * 12; 
-            const freqToX = (f) => cx + (f/maxFreq) * chartW;
-
-            // NO AXIS LINE drawn here
-            // Removed Interference Arcs (Red Lines) per request
-            /*
-            const limit = 32; 
-            let maxBeat = 0;
-
-            // Arcs Only
-            ctx.strokeStyle = 'rgba(255, 69, 58, 0.4)'; 
-            ctx.lineWidth = 1;
-            for(let n=1; n<=limit; n++) {
-                for(let m=1; m<=limit; m++) {
-                    const p1 = f1*n; const p2 = f2*m;
-                    const diff = Math.abs(p1 - p2);
-                    if (diff > 0.5 && diff < 60 && p1 < maxFreq && p2 < maxFreq) {
-                         const x1 = freqToX(p1); const x2 = freqToX(p2);
-                         const mid = (x1+x2)/2;
-                         const hCurve = Math.min(150, Math.abs(x1-x2)*1.5 + 30);
-                         ctx.beginPath(); ctx.moveTo(x1, cy); ctx.quadraticCurveTo(mid, cy + hCurve, x2, cy); ctx.stroke();
-                         if(diff > maxBeat) maxBeat = diff;
-                    }
-                }
-            }
-            */
-
-            // --- Text Data (BOTTOM) ---
+            
             const m = rational.n;
             const energy = (m <= 24) ? (100/m).toFixed(1) + "%" : "<4%";
             const textY = y + h - 10; 
 
             ctx.textAlign = 'left';
-            ctx.fillStyle = '#444'; ctx.font = '10px -apple-system';
+            ctx.fillStyle = '#888'; ctx.font = '10px -apple-system';
             ctx.fillText("HARMONIC LOCK", cx, textY - 25);
+            
             let lockColor = (m <= 24) ? '#32d74b' : '#ff453a';
             ctx.fillStyle = lockColor; ctx.font = '24px -apple-system';
             ctx.fillText(`#${m}`, cx, textY);
             
             ctx.textAlign = 'right';
-            ctx.fillStyle = '#444'; ctx.font = '10px -apple-system';
+            ctx.fillStyle = '#888'; ctx.font = '10px -apple-system';
             ctx.fillText("SIGNAL ENERGY", cx + chartW, textY - 25);
             ctx.fillStyle = '#fff'; ctx.font = '24px -apple-system';
             ctx.fillText(energy, cx + chartW, textY);
@@ -607,79 +778,119 @@
             const ratioLabel = getRatioText(cents, index, targetKey);
             const ci = getCoincidenceIndex(cents, index, targetKey);
             
-            // Layout Order Requested: 
-            // 1. Ratio
-            // 2. Diff (Color)
-            // 3. Cents (Value)
-            // 4. C.I. (Coincidence Limit)
-            
-            // 1. Ratio (Top) - White
             ctx.font = isHovered ? 'bold 12px -apple-system' : '500 11px -apple-system';
             ctx.fillStyle = '#fff';
             ctx.fillText(ratioLabel, x, y);
             
-            // 2. Diff (Middle-Top) - Colored
             ctx.font = '10px -apple-system'; 
             ctx.fillStyle = color;
             ctx.fillText(diffLabel, x, y + 14);
 
-            // 3. Absolute Cents (Middle-Bottom) - Gray
-            ctx.fillStyle = '#bbb'; 
+            ctx.fillStyle = '#ddd'; 
             ctx.fillText(absLabel, x, y + 26);
             
-            // 4. C.I. (Bottom) - Dark Gray
-            ctx.fillStyle = '#666'; ctx.font = '9px -apple-system';
+            ctx.fillStyle = '#999'; ctx.font = '9px -apple-system';
             ctx.fillText(`C.I. ${ci}`, x, y + 38);
+        }
+
+        // 专门为上半部分（Ref）轨道的标签绘制函数，文字向上排布
+        function drawLabelUp(x, y, cents, index, key, isHovered) {
+            ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; 
+            
+            const absLabel = cents.toFixed(1);
+            const ratioLabel = getRatioText(cents, index, key);
+            const ci = getCoincidenceIndex(cents, index, key);
+            
+            ctx.font = isHovered ? 'bold 12px -apple-system' : '500 11px -apple-system';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(ratioLabel, x, y);
+            
+            ctx.font = '10px -apple-system'; 
+            ctx.fillStyle = '#ddd';
+            ctx.fillText(absLabel, x, y - 14);
+            
+            ctx.fillStyle = '#999'; ctx.font = '9px -apple-system';
+            ctx.fillText(`C.I. ${ci}`, x, y - 26);
         }
 
         function handleMouseMove(e) {
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
-            let foundIndex = -1;
             
             if (mouseY > height - 80) return;
 
             // Ruler Hit Test
             const rulerH = 80;
-            const rulerY = (height * 0.35) - (rulerH / 2); // Matched new rulerY
+            const rulerY = (height * 0.35) - (rulerH / 2); 
+            const axisY = rulerY + rulerH/2;
             
-            // Generous hit test for Ruler
-            if (mouseY > rulerY - 20 && mouseY < rulerY + rulerH + 50) {
-                const maxCents = Math.max(1200, ...currentTarget);
+            if (mouseY > rulerY - 40 && mouseY < rulerY + rulerH + 60) {
+                const maxCentsTarget = Math.max(1200, ...currentTarget);
+                const maxCentsRef = Math.max(1200, ...currentRef);
+                const maxCents = Math.max(maxCentsTarget, maxCentsRef);
+                
                 const scaleW = width * 0.9;
                 const padL = (width - scaleW)/2;
                 let minDist = 20;
-                currentTarget.forEach((cents, i) => {
-                    const x = padL + (cents/maxCents) * scaleW;
-                    if (Math.abs(mouseX - x) < minDist) { minDist = Math.abs(mouseX - x); foundIndex = i; }
-                });
-                if (foundIndex !== -1 && foundIndex !== hoveredIndex) { hoveredIndex = foundIndex; draw(); }
-                if (foundIndex === -1 && hoveredIndex !== -1) { hoveredIndex = -1; draw(); }
+                let foundIndex = -1;
+                let foundTrack = null;
+
+                if (mouseY < axisY) {
+                    // Check upper half (Ref)
+                    currentRef.forEach((cents, i) => {
+                        const x = padL + (cents/maxCents) * scaleW;
+                        if (Math.abs(mouseX - x) < minDist) { minDist = Math.abs(mouseX - x); foundIndex = i; foundTrack = 'ref'; }
+                    });
+                } else {
+                    // Check lower half (Target)
+                    currentTarget.forEach((cents, i) => {
+                        const x = padL + (cents/maxCents) * scaleW;
+                        if (Math.abs(mouseX - x) < minDist) { minDist = Math.abs(mouseX - x); foundIndex = i; foundTrack = 'target'; }
+                    });
+                }
+                
+                if (foundIndex !== hoveredIndex || foundTrack !== hoveredTrack) { 
+                    hoveredIndex = foundIndex; 
+                    hoveredTrack = foundTrack;
+                    draw(); 
+                }
                 tooltip.style.opacity = 0;
                 return;
+            } else {
+                if (hoveredIndex !== -1) {
+                    hoveredIndex = -1;
+                    hoveredTrack = null;
+                    draw();
+                }
             }
         }
 
         function handleClick(e) {
-            if (hoveredIndex === -1) return;
-            selectedAnalysisIndex = hoveredIndex; 
+            if (hoveredIndex === -1 || hoveredTrack === null) return;
+            activeTrack = hoveredTrack;
+            if (activeTrack === 'ref') {
+                selectedRefIndex = hoveredIndex;
+            } else {
+                selectedTargetIndex = hoveredIndex;
+            }
             draw();
-            playToneComparison(hoveredIndex);
+            playActiveTone();
         }
         
-        function playToneComparison(index) {
+        function playActiveTone() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const baseFreq = 261.63; 
-            let centsRef, centsTarget;
-            // Always Analyzer mode logic
-            centsTarget = currentTarget[index];
-            if (currentTarget.length === currentRef.length) centsRef = currentRef[index];
-            else centsRef = getNearestRefCents(centsTarget);
+            if (audioCtx.state === 'suspended') audioCtx.resume();
             
-            const f1 = baseFreq * Math.pow(2, centsRef / 1200);
-            const f2 = baseFreq * Math.pow(2, centsTarget / 1200);
-            playOsc(f1, 'sine', 0, 0.5); playOsc(f2, 'triangle', 0, 0.5); 
+            const baseFreq = 261.63; 
+            
+            if (activeTrack === 'ref') {
+                const freq = baseFreq * Math.pow(2, currentRef[selectedRefIndex] / 1200);
+                playOsc(freq, 'sine', 0, 0.5); 
+            } else {
+                const freq = baseFreq * Math.pow(2, currentTarget[selectedTargetIndex] / 1200);
+                playOsc(freq, 'sine', 0, 0.5); // Target 同样使用 sine 波
+            }
         }
 
         function playOsc(freq, type, delay, duration) {
