@@ -160,9 +160,8 @@
         /* Keyboard hint styles */
         .keyboard-hint {
             position: absolute;
-            bottom: 6rem;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 2rem;
+            right: 2rem;
             font-size: 0.65rem;
             color: #666;
             letter-spacing: 0.05em;
@@ -752,7 +751,6 @@
             const maxFreq = f1 * 12; 
             
             const m = rational.n;
-            const energy = (m <= 24) ? (100/m).toFixed(1) + "%" : "<4%";
             const textY = y + h - 10; 
 
             ctx.textAlign = 'left';
@@ -762,12 +760,6 @@
             let lockColor = (m <= 24) ? '#32d74b' : '#ff453a';
             ctx.fillStyle = lockColor; ctx.font = '24px -apple-system';
             ctx.fillText(`#${m}`, cx, textY);
-            
-            ctx.textAlign = 'right';
-            ctx.fillStyle = '#888'; ctx.font = '10px -apple-system';
-            ctx.fillText("SIGNAL ENERGY", cx + chartW, textY - 25);
-            ctx.fillStyle = '#fff'; ctx.font = '24px -apple-system';
-            ctx.fillText(energy, cx + chartW, textY);
         }
 
         function drawLabel(x, y, diff, cents, index, targetKey, color, isHovered) {
