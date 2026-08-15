@@ -6,7 +6,6 @@
     <title>MICRULER - Minimalist</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Global Minimalist Black */
         body { 
             background-color: #000000; 
             color: #f5f5f7; 
@@ -28,7 +27,7 @@
             left: 2rem;
             font-size: 0.8rem;
             font-weight: 600;
-            color: #555; /* Slightly brightened from #333 for better visibility */
+            color: #555;
             text-transform: uppercase;
             letter-spacing: 0.2em;
             pointer-events: none;
@@ -65,18 +64,17 @@
 
         label {
             font-size: 0.5rem;
-            color: #888; /* Brightened from #444 */
+            color: #888;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             margin-left: 0.2rem;
         }
 
-        /* Select */
         select {
             appearance: none;
             background-color: transparent;
             border: none;
-            color: #bbb; /* Brightened from #999 */
+            color: #bbb;
             font-size: 0.8rem;
             font-weight: 500;
             cursor: pointer;
@@ -90,11 +88,10 @@
         }
         select:hover, select:focus { color: #fff; outline: none; }
 
-        /* Input */
         input[type="number"] {
             background: rgba(255,255,255,0.05);
             border: none;
-            border-bottom: 1px solid #888; /* Brightened from #666 */
+            border-bottom: 1px solid #888;
             color: #fff;
             width: 50px;
             font-size: 0.8rem;
@@ -106,7 +103,6 @@
         }
         input[type="number"]:focus { border-color: #0a84ff; background: rgba(255,255,255,0.1); }
 
-        /* Button Toggle */
         .toggle-btn {
             background: transparent;
             border: none;
@@ -121,11 +117,10 @@
         }
         .toggle-btn:hover { color: #fff; }
 
-        /* Divider */
         .divider {
             width: 1px;
             height: 16px;
-            background-color: rgba(255,255,255,0.15); /* Slightly more visible */
+            background-color: rgba(255,255,255,0.15);
             flex-shrink: 0;
         }
 
@@ -138,10 +133,9 @@
 
         canvas { display: block; }
 
-        /* Tooltip */
         #tooltip {
             position: absolute;
-            background: rgba(15, 15, 15, 0.95); /* Slightly lighter background */
+            background: rgba(15, 15, 15, 0.95);
             backdrop-filter: blur(10px);
             padding: 0.8rem 1rem;
             border-left: 2px solid #fff;
@@ -157,7 +151,6 @@
         .tooltip-val { font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; }
         .tooltip-row { display: flex; justify-content: space-between; margin-bottom: 0.3rem; color: #999; }
 
-        /* Keyboard hint styles */
         .keyboard-hint {
             position: absolute;
             top: 2rem;
@@ -200,16 +193,12 @@
 
         <div class="control-group">
             <label>Ref (Base)</label>
-            <select id="ref-select" onchange="updateTunings('ref')">
-                <!-- Populated by JS -->
-            </select>
+            <select id="ref-select" onchange="updateTunings('ref')"></select>
         </div>
 
         <div class="control-group">
             <label>Target</label>
-            <select id="target-select" onchange="updateTunings('target')">
-                <!-- Populated by JS -->
-            </select>
+            <select id="target-select" onchange="updateTunings('target')"></select>
         </div>
         
         <!-- Custom EDO Input -->
@@ -220,6 +209,14 @@
 
         <div class="divider"></div>
         
+        <!-- Playback Drone Toggle (NEW) -->
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="toggle-btn" id="drone-btn" onclick="toggleDrone()">Drone: ON</button>
+        </div>
+
+        <div class="divider"></div>
+
         <!-- Ratio Format Toggle -->
         <div class="control-group">
             <label>&nbsp;</label>
@@ -228,7 +225,6 @@
     </div>
 
     <script>
-        // --- Tuning Data ---
         const tunings = {
             "12-TET": [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200],
             "Just Intonation": [0, 111.73, 203.91, 315.64, 386.31, 498.04, 590.22, 701.96, 813.69, 884.36, 996.09, 1088.27, 1200],
@@ -250,18 +246,16 @@
         let currentRef = tunings["12-TET"];
         let currentTarget = tunings["Pythagorean"];
         let displayMode = 'both'; 
-        let viewMode = 'analyzer';
         
-        // NEW STATE FOR TRACK SELECTION
         let activeTrack = 'target'; // 'ref' or 'target'
         let selectedRefIndex = 0;
         let selectedTargetIndex = 7;
         
         let showDecimalRatio = false; 
+        let droneEnabled = true; // NEW: Toggle to play fundamental tone for harmonic comparison
         
         let customRefEDO = null; 
         let customTargetEDO = null;
-        
         let activeSclTarget = null;
         let prevRefKey = "12-TET";
         let prevTargetKey = "Pythagorean";
@@ -274,13 +268,13 @@
         let hoveredTrack = null;
         let hoveredIndex = -1; 
         let audioCtx;
+        let currentOscs = []; // 新增：用于追踪当前播放的音频，实现干净的单音切换
 
         function init() {
             populateSelects();
             resize();
             window.addEventListener('resize', resize);
             
-            // Mouse & Touch events
             canvas.addEventListener('mousemove', handleMouseMove);
             canvas.addEventListener('mouseleave', () => {
                 hoveredTrack = null;
@@ -290,15 +284,72 @@
             });
             canvas.addEventListener('mousedown', handleClick);
             
-            // Add touch support for mobile
             canvas.addEventListener('touchstart', (e) => {
                 const touch = e.touches[0];
                 handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
                 handleClick({ clientX: touch.clientX, clientY: touch.clientY });
             }, {passive: false});
 
-            // Keyboard events
             window.addEventListener('keydown', handleKeyDown);
+        }
+
+        // Stops all currently playing audio tones to prevent overlap during fast movements
+        function stopAllOscs() {
+            currentOscs.forEach(o => {
+                try {
+                    o.osc.stop();
+                    o.osc.disconnect();
+                    o.gain.disconnect();
+                } catch(e) {}
+            });
+            currentOscs = [];
+        }
+
+        // Enhanced Playback: Uses Triangle waves and a Root Drone to expose tuning differences
+        function playActiveTone() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            stopAllOscs();
+
+            const baseFreq = 261.63; // C4
+            
+            let cents = activeTrack === 'ref' ? currentRef[selectedRefIndex] : currentTarget[selectedTargetIndex];
+            let freq = baseFreq * Math.pow(2, cents / 1200);
+
+            // Play the active selected note (Using Triangle for audible harmonics)
+            playOsc(freq, 'triangle', 0, 1.5, 0.4); 
+
+            // Play the drone (Base Frequency) to clearly expose microtonal interval beating
+            // (We skip the drone if we are playing the unison or octave)
+            if (droneEnabled && Math.abs(cents) > 1 && Math.abs(cents - 1200) > 1) {
+                playOsc(baseFreq, 'triangle', 0, 1.5, 0.15); // Quieter drone
+            }
+        }
+
+        function playOsc(freq, type, delay, duration, maxVol) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            
+            // Envelope shaping
+            gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
+            gain.gain.linearRampToValueAtTime(maxVol, audioCtx.currentTime + delay + 0.05); // Quick attack
+            gain.gain.setTargetAtTime(0.001, audioCtx.currentTime + delay + 0.1, duration / 3); // Smooth natural decay
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(audioCtx.currentTime + delay);
+            osc.stop(audioCtx.currentTime + delay + duration + 0.5);
+
+            currentOscs.push({osc: osc, gain: gain});
+        }
+
+        function toggleDrone() {
+            droneEnabled = !droneEnabled;
+            document.getElementById('drone-btn').innerText = droneEnabled ? 'Drone: ON' : 'Drone: OFF';
+            playActiveTone(); // Play immediately to demonstrate the new state
         }
 
         function handleKeyDown(e) {
@@ -313,28 +364,24 @@
             if (e.key === 'ArrowUp') {
                 if (activeTrack !== 'ref') {
                     activeTrack = 'ref';
-                    // Align cursor to the nearest ref note
                     const targetCents = currentTarget[selectedTargetIndex];
                     let minDiff = Infinity, bestIdx = 0;
                     currentRef.forEach((c, i) => {
                         if (Math.abs(c - targetCents) < minDiff) { minDiff = Math.abs(c - targetCents); bestIdx = i; }
                     });
                     selectedRefIndex = bestIdx;
-                    changed = true;
-                    play = true; // 切换轨道时也播放
+                    changed = true; play = true;
                 }
             } else if (e.key === 'ArrowDown') {
                 if (activeTrack !== 'target') {
                     activeTrack = 'target';
-                    // Align cursor to the nearest target note
                     const refCents = currentRef[selectedRefIndex];
                     let minDiff = Infinity, bestIdx = 0;
                     currentTarget.forEach((c, i) => {
                         if (Math.abs(c - refCents) < minDiff) { minDiff = Math.abs(c - refCents); bestIdx = i; }
                     });
                     selectedTargetIndex = bestIdx;
-                    changed = true;
-                    play = true; // 切换轨道时也播放
+                    changed = true; play = true;
                 }
             } else if (e.key === 'ArrowLeft') {
                 if (activeTrack === 'ref' && selectedRefIndex > 0) {
@@ -449,7 +496,6 @@
             draw();
         }
 
-        // Standard SCL File Parser
         function parseSCL(text) {
             const lines = text.split('\n').map(l => l.trim());
             const dataLines = lines.filter(l => l.length > 0 && !l.startsWith('!'));
@@ -668,25 +714,22 @@
 
         function drawAnalyzerRuler(x, y, w, h) {
             ctx.save();
-            // 向上扩展裁剪区域，防止顶部的信息标签被切掉
             ctx.beginPath(); ctx.rect(x, y - 120, w, h + 250); 
             ctx.clip();
             
             const axisY = y + h/2; 
             const maxCentsTarget = Math.max(1200, ...currentTarget);
             const maxCentsRef = Math.max(1200, ...currentRef);
-            const maxCents = Math.max(maxCentsTarget, maxCentsRef); // Ensure both share the same scale
+            const maxCents = Math.max(maxCentsTarget, maxCentsRef);
             const scaleW = w * 0.9; 
             const padL = (w - scaleW)/2;
             const centsToX = (c) => padL + (c / maxCents) * scaleW;
 
             const refKey = document.getElementById('ref-select').value;
 
-            // Increased contrast for the axis line
             ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(padL + scaleW, axisY); ctx.stroke();
 
-            // Ref (Ticks UP)
             currentRef.forEach((cents, i) => {
                 const px = centsToX(cents);
                 const isSelected = (activeTrack === 'ref' && selectedRefIndex === i);
@@ -700,16 +743,14 @@
                     ctx.fillStyle = '#888'; ctx.fillRect(px-0.5, axisY-12, 1, 8);
                 }
 
-                // Brightened text labels (C, C#, etc.)
                 ctx.fillStyle = (isSelected || isHovered) ? '#fff' : '#bbb'; 
                 ctx.font = (isSelected || isHovered) ? 'bold 10px -apple-system' : '10px -apple-system'; 
                 ctx.textAlign = 'center';
-                ctx.textBaseline = 'bottom'; // 确保顶部标签按底部对齐
+                ctx.textBaseline = 'bottom';
                 if (currentRef.length <= 20 || i%5===0 || i===currentRef.length-1 || isSelected || isHovered) {
                     ctx.fillText(getLabelName(i, currentRef.length), px, axisY - (isSelected ? 24 : 20));
                 }
 
-                // 添加上半部分选中状态的详细信息 (Ratio, Cents, C.I.)
                 if (isSelected || isHovered) {
                     drawLabelUp(px, axisY - 40, cents, i, refKey, isSelected || isHovered);
                 }
@@ -745,10 +786,8 @@
         }
 
         function drawModule_Combined(x, y, w, h, rational, decimalRatio) {
-            const f1 = 220; const f2 = f1 * decimalRatio;
             const pad = 40; const chartW = w - pad*2;
             const cx = x + pad; const cy = y + 20; 
-            const maxFreq = f1 * 12; 
             
             const m = rational.n;
             const textY = y + h - 10; 
@@ -785,7 +824,6 @@
             ctx.fillText(`C.I. ${ci}`, x, y + 38);
         }
 
-        // 专门为上半部分（Ref）轨道的标签绘制函数，文字向上排布
         function drawLabelUp(x, y, cents, index, key, isHovered) {
             ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; 
             
@@ -812,7 +850,6 @@
             
             if (mouseY > height - 80) return;
 
-            // Ruler Hit Test
             const rulerH = 80;
             const rulerY = (height * 0.35) - (rulerH / 2); 
             const axisY = rulerY + rulerH/2;
@@ -829,13 +866,11 @@
                 let foundTrack = null;
 
                 if (mouseY < axisY) {
-                    // Check upper half (Ref)
                     currentRef.forEach((cents, i) => {
                         const x = padL + (cents/maxCents) * scaleW;
                         if (Math.abs(mouseX - x) < minDist) { minDist = Math.abs(mouseX - x); foundIndex = i; foundTrack = 'ref'; }
                     });
                 } else {
-                    // Check lower half (Target)
                     currentTarget.forEach((cents, i) => {
                         const x = padL + (cents/maxCents) * scaleW;
                         if (Math.abs(mouseX - x) < minDist) { minDist = Math.abs(mouseX - x); foundIndex = i; foundTrack = 'target'; }
@@ -845,6 +880,20 @@
                 if (foundIndex !== hoveredIndex || foundTrack !== hoveredTrack) { 
                     hoveredIndex = foundIndex; 
                     hoveredTrack = foundTrack;
+                    
+                    // 光标悬停时直接更新激活轨道并严格只播放该音高
+                    if (hoveredIndex !== -1 && hoveredTrack !== null) {
+                        activeTrack = hoveredTrack;
+                        if (activeTrack === 'ref') {
+                            selectedRefIndex = hoveredIndex;
+                        } else {
+                            selectedTargetIndex = hoveredIndex;
+                        }
+                        // 需要用户进行过至少一次点击交互（解锁音频上下文）后，才能在 hover 时触发播放
+                        if (audioCtx && audioCtx.state === 'running') {
+                            playActiveTone();
+                        }
+                    }
                     draw(); 
                 }
                 tooltip.style.opacity = 0;
@@ -870,29 +919,61 @@
             playActiveTone();
         }
         
+        function stopAllOscs() {
+            currentOscs.forEach(o => {
+                try {
+                    o.osc.stop();
+                    o.osc.disconnect();
+                    o.gain.disconnect();
+                } catch(err) {}
+            });
+            currentOscs = [];
+        }
+
         function playActiveTone() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
             
-            const baseFreq = 261.63; 
+            stopAllOscs(); // 每次播放新音高前，立刻停止旧的声音，避免重叠造成听觉混淆
             
+            const baseFreq = 261.63; // C4
+            
+            // 严格确保只计算和播放当前激活轨道所对应的音高
+            let freq;
             if (activeTrack === 'ref') {
-                const freq = baseFreq * Math.pow(2, currentRef[selectedRefIndex] / 1200);
-                playOsc(freq, 'sine', 0, 0.5); 
+                freq = baseFreq * Math.pow(2, currentRef[selectedRefIndex] / 1200);
             } else {
-                const freq = baseFreq * Math.pow(2, currentTarget[selectedTargetIndex] / 1200);
-                playOsc(freq, 'sine', 0, 0.5); // Target 同样使用 sine 波
+                freq = baseFreq * Math.pow(2, currentTarget[selectedTargetIndex] / 1200);
             }
+
+            // 使用 'triangle' (三角波) 替代 'sine'。
+            // 纯正弦波缺乏泛音，人耳极难分辨微小音分差异。三角波丰富的泛音能让你清晰听到上下刻度切换时的音准变化。
+            playOsc(freq, 'triangle', 0, 1.0); 
         }
 
         function playOsc(freq, type, delay, duration) {
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.type = type; osc.frequency.value = freq;
+            const osc = audioCtx.createOscillator(); 
+            const gain = audioCtx.createGain();
+            
+            osc.type = type; 
+            osc.frequency.value = freq;
+            
             gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
-            gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + delay + 0.05);
+            gain.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + delay + 0.05); // 稍微提高一点听觉增益
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(audioCtx.currentTime + delay); osc.stop(audioCtx.currentTime + delay + duration + 0.1);
+            
+            osc.connect(gain); 
+            gain.connect(audioCtx.destination);
+            
+            osc.start(audioCtx.currentTime + delay); 
+            
+            currentOscs.push({osc: osc, gain: gain});
+            
+            // 定时清理播放完的振荡器
+            setTimeout(() => {
+                const index = currentOscs.findIndex(o => o.osc === osc);
+                if (index > -1) currentOscs.splice(index, 1);
+            }, (duration + 0.1) * 1000);
         }
 
         init();
