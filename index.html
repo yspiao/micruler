@@ -6,6 +6,7 @@
     <title>MICRULER - Minimalist</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Global Minimalist Black */
         body { 
             background-color: #000000; 
             color: #f5f5f7; 
@@ -18,6 +19,7 @@
             overflow: hidden;
             letter-spacing: -0.02em; 
             user-select: none;
+            -webkit-font-smoothing: antialiased;
         }
 
         /* Top Label */
@@ -43,16 +45,16 @@
             display: flex;
             align-items: center;
             gap: 1.5rem;
-            background: transparent;
-            padding: 0.8rem 1.8rem;
-            z-index: 50;
-            transition: opacity 0.2s;
-            white-space: nowrap;
-            max-width: 90vw;
+            background: rgba(10, 10, 10, 0.8); 
+            backdrop-filter: blur(10px);
+            padding: 0.8rem 1.8rem; 
+            z-index: 50; 
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            white-space: nowrap; 
+            max-width: 90vw; 
             overflow-x: auto;
         }
-        
-        /* Hide scrollbar for dock */
         .bottom-dock::-webkit-scrollbar { display: none; }
 
         .control-group {
@@ -70,6 +72,7 @@
             margin-left: 0.2rem;
         }
 
+        /* Select */
         select {
             appearance: none;
             background-color: transparent;
@@ -88,6 +91,7 @@
         }
         select:hover, select:focus { color: #fff; outline: none; }
 
+        /* Input */
         input[type="number"] {
             background: rgba(255,255,255,0.05);
             border: none;
@@ -103,6 +107,7 @@
         }
         input[type="number"]:focus { border-color: #0a84ff; background: rgba(255,255,255,0.1); }
 
+        /* Button Toggle */
         .toggle-btn {
             background: transparent;
             border: none;
@@ -117,6 +122,7 @@
         }
         .toggle-btn:hover { color: #fff; }
 
+        /* Divider */
         .divider {
             width: 1px;
             height: 16px;
@@ -131,26 +137,9 @@
             cursor: crosshair;
         }
 
-        canvas { display: block; }
+        canvas { display: block; width: 100%; height: 100%; }
 
-        #tooltip {
-            position: absolute;
-            background: rgba(15, 15, 15, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 0.8rem 1rem;
-            border-left: 2px solid #fff;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.1s;
-            font-size: 0.8rem;
-            z-index: 20;
-            min-width: 140px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
-        }
-
-        .tooltip-val { font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; }
-        .tooltip-row { display: flex; justify-content: space-between; margin-bottom: 0.3rem; color: #999; }
-
+        /* Keyboard hint styles */
         .keyboard-hint {
             position: absolute;
             top: 2rem;
@@ -173,51 +162,46 @@
     </style>
 </head>
 <body>
-
     <div class="top-label">MICRULER</div>
+
+    <div class="keyboard-hint">
+        <span><span class="key-tag">▲</span> <span class="key-tag">▼</span> Track</span>
+        <span><span class="key-tag">◀</span> <span class="key-tag">▶</span> Move</span>
+    </div>
 
     <div id="canvas-wrapper">
         <canvas id="rulerCanvas"></canvas>
-        <div id="tooltip"></div>
     </div>
     
-    <div class="keyboard-hint">
-        <span><span class="key-tag">▲</span> <span class="key-tag">▼</span> Select Track</span>
-        <span><span class="key-tag">◀</span> <span class="key-tag">▶</span> Move & Play</span>
-    </div>
-
-    <!-- Unified Bottom Dock -->
     <div class="bottom-dock">
-        <!-- Hidden input for SCL file upload -->
         <input type="file" id="scl-file-input" accept=".scl" style="display: none;" onchange="handleSclUpload(event)">
 
         <div class="control-group">
-            <label>Ref (Base)</label>
+            <label>Ref (Top)</label>
             <select id="ref-select" onchange="updateTunings('ref')"></select>
         </div>
 
         <div class="control-group">
-            <label>Target</label>
+            <label>Target (Bottom)</label>
             <select id="target-select" onchange="updateTunings('target')"></select>
         </div>
         
-        <!-- Custom EDO Input -->
         <div class="control-group" id="edo-group" style="display:none;">
             <label>N (Steps)</label>
             <input type="number" id="edo-input" value="31" step="0.01" min="1" onchange="updateTunings()" onkeydown="if(event.key==='Enter') updateTunings()">
         </div>
 
-        <div class="divider"></div>
-        
-        <!-- Playback Drone Toggle (NEW) -->
-        <div class="control-group">
-            <label>&nbsp;</label>
-            <button class="toggle-btn" id="drone-btn" onclick="toggleDrone()">Drone: ON</button>
+        <div class="control-group" id="ji-group" style="display:none;">
+            <label>JI Limit</label>
+            <select id="ji-limit" onchange="updateTunings()">
+                <option value="3">3-Limit</option>
+                <option value="5" selected>5-Limit</option>
+                <option value="7">7-Limit</option>
+                <option value="11">11-Limit</option>
+            </select>
         </div>
 
         <div class="divider"></div>
-
-        <!-- Ratio Format Toggle -->
         <div class="control-group">
             <label>&nbsp;</label>
             <button class="toggle-btn" id="fmt-btn" onclick="toggleRatioFormat()">Ratio</button>
@@ -225,180 +209,195 @@
     </div>
 
     <script>
-        const tunings = {
+        // --- Core Tuning Data ---
+        const standardTunings = {
             "12-TET": [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200],
             "Just Intonation": [0, 111.73, 203.91, 315.64, 386.31, 498.04, 590.22, 701.96, 813.69, 884.36, 996.09, 1088.27, 1200],
             "Pythagorean": [0, 113.69, 203.91, 294.13, 407.82, 498.04, 611.73, 701.96, 792.18, 905.87, 996.09, 1109.78, 1223.46], 
             "Meantone 1/4": [0, 76.0, 193.2, 310.3, 386.3, 503.4, 579.5, 696.6, 772.6, 889.7, 1006.8, 1082.9, 1200],
-            "Werckmeister III": [0, 90.22, 192.18, 294.13, 390.22, 498.04, 588.27, 696.09, 792.18, 888.27, 996.09, 1092.18, 1200],
-            "Young No.2": [0, 94.14, 196.09, 298.05, 392.18, 501.96, 592.18, 700, 796.09, 894.14, 1000, 1094.14, 1200],
-            "Harmonic Series (16-32)": [0, 104.96, 203.91, 297.51, 386.31, 470.78, 551.32, 628.27, 701.96, 772.63, 840.53, 905.87, 968.83, 1029.58, 1088.27, 1145.04, 1200]
+            "Harmonic Series": [0, 104.96, 203.91, 297.51, 386.31, 470.78, 551.32, 628.27, 701.96, 772.63, 840.53, 905.87, 968.83, 1029.58, 1088.27, 1145.04, 1200]
         };
 
         const tuningFractions = {
-            "Just Intonation": ["1:1", "16:15", "9:8", "6:5", "5:4", "4:3", "45:32", "3:2", "8:5", "5:3", "16:9", "15:8", "2:1"],
-            "Pythagorean": ["1:1", "256:243", "9:8", "32:27", "81:64", "4:3", "729:512", "3:2", "128:81", "27:16", "16:9", "243:128", "531441:262144"],
-            "Harmonic Series (16-32)": ["1:1", "17:16", "9:8", "19:16", "5:4", "21:16", "11:8", "23:16", "3:2", "25:16", "13:8", "27:16", "7:4", "29:16", "15:8", "31:16", "2:1"]
+            "Just Intonation": ["1/1", "16/15", "9/8", "6/5", "5/4", "4/3", "45/32", "3/2", "8/5", "5/3", "16/9", "15/8", "2/1"],
+            "Pythagorean": ["1/1", "256/243", "9/8", "32/27", "81/64", "4/3", "729/512", "3/2", "128/81", "27/16", "16/9", "243/128", "2/1"],
+            "Harmonic Series": ["1/1", "17/16", "9/8", "19/16", "5/4", "21/16", "11/8", "23/16", "3/2", "25/16", "13/8", "27/16", "7/4", "29/16", "15/8", "31/16", "2/1"]
         };
 
         const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C'"];
         
+        let tunings = { ...standardTunings };
         let currentRef = tunings["12-TET"];
         let currentTarget = tunings["Pythagorean"];
-        let displayMode = 'both'; 
         
-        let activeTrack = 'target'; // 'ref' or 'target'
-        let selectedRefIndex = 0;
-        let selectedTargetIndex = 7;
-        
-        let showDecimalRatio = false; 
-        let droneEnabled = true; // NEW: Toggle to play fundamental tone for harmonic comparison
-        
+        // Custom JI Generator Database (Primes up to 11)
+        const jiPool = [
+            {n:1, d:1}, {n:256, d:243}, {n:16, d:15}, {n:10, d:9}, {n:9, d:8}, {n:8, d:7}, {n:7, d:6},
+            {n:32, d:27}, {n:6, d:5}, {n:5, d:4}, {n:81, d:64}, {n:9, d:7}, {n:21, d:16}, {n:4, d:3},
+            {n:11, d:8}, {n:7, d:5}, {n:45, d:32}, {n:64, d:45}, {n:10, d:7}, {n:16, d:11}, {n:3, d:2},
+            {n:32, d:21}, {n:14, d:9}, {n:128, d:81}, {n:8, d:5}, {n:5, d:3}, {n:27, d:16}, {n:12, d:7},
+            {n:7, d:4}, {n:16, d:9}, {n:9, d:5}, {n:15, d:8}, {n:243, d:128}, {n:2, d:1}
+        ];
+
+        let refRatios = [];
+        let targetRatios = [];
         let customRefEDO = null; 
         let customTargetEDO = null;
-        let activeSclTarget = null;
-        let prevRefKey = "12-TET";
-        let prevTargetKey = "Pythagorean";
+
+        // Interaction State
+        let activeTrack = 'target'; 
+        let selectedRefIndex = 0;
+        let selectedTargetIndex = 7;
+        let anchorCents = 700; // 新增：记录用户明确选择的意图音分，解决上下切换时吸附不对齐的问题
+        
+        let showDecimalRatio = false; 
+        let audioCtx;
+        let currentOscs = []; // Global tracking to prevent clipping
 
         const canvas = document.getElementById('rulerCanvas');
         const ctx = canvas.getContext('2d');
-        const tooltip = document.getElementById('tooltip');
-        let width, height, cx, cy;
-        
-        let hoveredTrack = null;
-        let hoveredIndex = -1; 
-        let audioCtx;
-        let currentOscs = []; // 新增：用于追踪当前播放的音频，实现干净的单音切换
+        let width, height;
 
         function init() {
             populateSelects();
             resize();
             window.addEventListener('resize', resize);
             
-            canvas.addEventListener('mousemove', handleMouseMove);
-            canvas.addEventListener('mouseleave', () => {
-                hoveredTrack = null;
-                hoveredIndex = -1;
-                tooltip.style.opacity = 0;
-                draw();
-            });
+            // Interaction Hooks
             canvas.addEventListener('mousedown', handleClick);
-            
-            canvas.addEventListener('touchstart', (e) => {
-                const touch = e.touches[0];
-                handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
-                handleClick({ clientX: touch.clientX, clientY: touch.clientY });
-            }, {passive: false});
-
             window.addEventListener('keydown', handleKeyDown);
+            
+            // Start Global Render Loop (Drives the beating animation)
+            requestAnimationFrame(renderLoop);
         }
 
-        // Stops all currently playing audio tones to prevent overlap during fast movements
-        function stopAllOscs() {
-            currentOscs.forEach(o => {
-                try {
-                    o.osc.stop();
-                    o.osc.disconnect();
-                    o.gain.disconnect();
-                } catch(e) {}
-            });
-            currentOscs = [];
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = document.getElementById('canvas-wrapper').clientHeight;
         }
 
-        // Enhanced Playback: Uses Triangle waves and a Root Drone to expose tuning differences
-        function playActiveTone() {
+        function playTone() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
             
-            stopAllOscs();
-
             const baseFreq = 261.63; // C4
+            const cents = activeTrack === 'ref' ? currentRef[selectedRefIndex] : currentTarget[selectedTargetIndex];
+            const freq = baseFreq * Math.pow(2, cents / 1200);
+
+            const now = audioCtx.currentTime;
             
-            let cents = activeTrack === 'ref' ? currentRef[selectedRefIndex] : currentTarget[selectedTargetIndex];
-            let freq = baseFreq * Math.pow(2, cents / 1200);
+            // Immediately stop previous oscillators to prevent clicking/clipping
+            currentOscs.forEach(o => {
+                try {
+                    o.gain.gain.cancelScheduledValues(now);
+                    o.gain.gain.linearRampToValueAtTime(0, now + 0.015);
+                    o.osc.stop(now + 0.03);
+                } catch(err) {}
+            });
+            currentOscs = [];
 
-            // Play the active selected note (Using Triangle for audible harmonics)
-            playOsc(freq, 'triangle', 0, 1.5, 0.4); 
-
-            // Play the drone (Base Frequency) to clearly expose microtonal interval beating
-            // (We skip the drone if we are playing the unison or octave)
-            if (droneEnabled && Math.abs(cents) > 1 && Math.abs(cents - 1200) > 1) {
-                playOsc(baseFreq, 'triangle', 0, 1.5, 0.15); // Quieter drone
-            }
-        }
-
-        function playOsc(freq, type, delay, duration, maxVol) {
-            const osc = audioCtx.createOscillator();
+            // 1. 创建合成器与音量控制，新增滤波器(Filter)以提升质感
+            const osc = audioCtx.createOscillator(); 
             const gain = audioCtx.createGain();
-            osc.type = type;
+            const filter = audioCtx.createBiquadFilter();
+            
+            // 2. 核心改动：使用锯齿波(sawtooth)。它拥有最完整的奇偶泛音列，能让人耳极其敏锐地捕捉微音分差异。
+            osc.type = 'sawtooth'; 
             osc.frequency.value = freq;
             
-            // Envelope shaping
-            gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
-            gain.gain.linearRampToValueAtTime(maxVol, audioCtx.currentTime + delay + 0.05); // Quick attack
-            gain.gain.setTargetAtTime(0.001, audioCtx.currentTime + delay + 0.1, duration / 3); // Smooth natural decay
-
-            osc.connect(gain);
+            // 加入低通滤波，削掉过于尖锐的高频，让声音温润（模拟模拟合成器的质感）
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(2500, now);
+            
+            // 3. 核心改动：延长 Sustain 包络
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.3, now + 0.02); // 柔和的起音 Attack
+            // 衰减时间从 0.3s 延长到了 0.7s (多出了 0.4s 的 Sustain 延音)
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7); 
+            
+            osc.connect(filter); 
+            filter.connect(gain);
             gain.connect(audioCtx.destination);
-            osc.start(audioCtx.currentTime + delay);
-            osc.stop(audioCtx.currentTime + delay + duration + 0.5);
-
-            currentOscs.push({osc: osc, gain: gain});
-        }
-
-        function toggleDrone() {
-            droneEnabled = !droneEnabled;
-            document.getElementById('drone-btn').innerText = droneEnabled ? 'Drone: ON' : 'Drone: OFF';
-            playActiveTone(); // Play immediately to demonstrate the new state
+            
+            osc.start(now); 
+            osc.stop(now + 0.8); // 配合延音，将强制切断时间也延后
+            
+            currentOscs.push({osc, gain});
         }
 
         function handleKeyDown(e) {
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') return;
-
             const isArrowKey = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key);
             if (isArrowKey) e.preventDefault();
 
-            let changed = false;
             let play = false;
 
             if (e.key === 'ArrowUp') {
-                if (activeTrack !== 'ref') {
-                    activeTrack = 'ref';
-                    const targetCents = currentTarget[selectedTargetIndex];
-                    let minDiff = Infinity, bestIdx = 0;
-                    currentRef.forEach((c, i) => {
-                        if (Math.abs(c - targetCents) < minDiff) { minDiff = Math.abs(c - targetCents); bestIdx = i; }
-                    });
-                    selectedRefIndex = bestIdx;
-                    changed = true; play = true;
-                }
+                activeTrack = 'ref';
+                selectedRefIndex = getNearestIndex(currentRef, anchorCents); // 使用意图锚点垂直对齐
+                play = true;
             } else if (e.key === 'ArrowDown') {
-                if (activeTrack !== 'target') {
-                    activeTrack = 'target';
-                    const refCents = currentRef[selectedRefIndex];
-                    let minDiff = Infinity, bestIdx = 0;
-                    currentTarget.forEach((c, i) => {
-                        if (Math.abs(c - refCents) < minDiff) { minDiff = Math.abs(c - refCents); bestIdx = i; }
-                    });
-                    selectedTargetIndex = bestIdx;
-                    changed = true; play = true;
-                }
+                activeTrack = 'target';
+                selectedTargetIndex = getNearestIndex(currentTarget, anchorCents); // 使用意图锚点垂直对齐
+                play = true;
             } else if (e.key === 'ArrowLeft') {
-                if (activeTrack === 'ref' && selectedRefIndex > 0) {
-                    selectedRefIndex--; changed = true; play = true;
-                } else if (activeTrack === 'target' && selectedTargetIndex > 0) {
-                    selectedTargetIndex--; changed = true; play = true;
+                if (activeTrack === 'ref' && selectedRefIndex > 0) { 
+                    selectedRefIndex--; 
+                    anchorCents = currentRef[selectedRefIndex]; // 更新横向意图
+                    play = true; 
+                } else if (activeTrack === 'target' && selectedTargetIndex > 0) { 
+                    selectedTargetIndex--; 
+                    anchorCents = currentTarget[selectedTargetIndex]; // 更新横向意图
+                    play = true; 
                 }
             } else if (e.key === 'ArrowRight') {
-                if (activeTrack === 'ref' && selectedRefIndex < currentRef.length - 1) {
-                    selectedRefIndex++; changed = true; play = true;
-                } else if (activeTrack === 'target' && selectedTargetIndex < currentTarget.length - 1) {
-                    selectedTargetIndex++; changed = true; play = true;
+                if (activeTrack === 'ref' && selectedRefIndex < currentRef.length - 1) { 
+                    selectedRefIndex++; 
+                    anchorCents = currentRef[selectedRefIndex]; // 更新横向意图
+                    play = true; 
+                } else if (activeTrack === 'target' && selectedTargetIndex < currentTarget.length - 1) { 
+                    selectedTargetIndex++; 
+                    anchorCents = currentTarget[selectedTargetIndex]; // 更新横向意图
+                    play = true; 
                 }
             }
+            if (play) playTone();
+        }
 
-            if (changed) draw();
-            if (play) playActiveTone();
+        function handleClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseY = e.clientY - rect.top;
+            const mouseX = e.clientX - rect.left;
+            
+            // Calculate Ruler Bounds
+            const rulerH = 80;
+            const rulerY = (height * 0.5) - (rulerH / 2);
+            const axisY = rulerY + rulerH/2;
+
+            const scaleW = width * 0.9; 
+            const padL = (width - scaleW)/2;
+            const maxCents = Math.max(Math.max(...currentRef), Math.max(...currentTarget));
+            const clickedCents = ((mouseX - padL) / scaleW) * maxCents;
+
+            // Global Click Hit Test (Upper half = Ref, Lower half = Target)
+            if (mouseY < axisY) {
+                activeTrack = 'ref';
+                selectedRefIndex = getNearestIndex(currentRef, clickedCents);
+                anchorCents = currentRef[selectedRefIndex]; // 更新横向意图
+            } else {
+                activeTrack = 'target';
+                selectedTargetIndex = getNearestIndex(currentTarget, clickedCents);
+                anchorCents = currentTarget[selectedTargetIndex]; // 更新横向意图
+            }
+            playTone();
+        }
+
+        function getNearestIndex(arr, targetVal) {
+            let minDiff = Infinity, bestIdx = 0;
+            arr.forEach((val, i) => {
+                if (Math.abs(val - targetVal) < minDiff) { minDiff = Math.abs(val - targetVal); bestIdx = i; }
+            });
+            return bestIdx;
         }
 
         function populateSelects() {
@@ -406,188 +405,87 @@
             const refSel = document.getElementById('ref-select');
             
             Object.keys(tunings).forEach(key => {
-                let opt = document.createElement('option');
-                opt.value = key;
-                opt.text = key;
+                let opt = new Option(key, key);
                 targetSel.add(opt.cloneNode(true));
                 refSel.add(opt);
             });
             
-            let customOpt = document.createElement('option');
-            customOpt.value = "Custom EDO";
-            customOpt.text = "Custom EDO...";
-            targetSel.add(customOpt.cloneNode(true));
-            refSel.add(customOpt);
+            targetSel.add(new Option("Custom EDO...", "Custom EDO"));
+            refSel.add(new Option("Custom EDO...", "Custom EDO"));
+            targetSel.add(new Option("Custom JI...", "Custom JI"));
+            refSel.add(new Option("Custom JI...", "Custom JI"));
 
-            let sclOpt = document.createElement('option');
-            sclOpt.value = "Load SCL";
-            sclOpt.text = "Load .scl File...";
-            targetSel.add(sclOpt.cloneNode(true));
-            refSel.add(sclOpt);
-            
             refSel.value = "12-TET";
-            targetSel.value = "Pythagorean";
-            prevRefKey = "12-TET";
-            prevTargetKey = "Pythagorean";
-            
-            currentRef = tunings["12-TET"];
-            currentTarget = tunings["Pythagorean"];
-        }
-        
-        function generateEDO(n) {
-            const stepSize = 1200 / n;
-            const centsArray = [];
-            const maxPoints = Math.min(n, 500); 
-            for(let i=0; i<=maxPoints; i++) {
-                centsArray.push(i * stepSize);
-            }
-            return { n: n, array: centsArray };
+            targetSel.value = "Just Intonation";
+            updateTunings();
         }
 
-        function updateTunings(triggerSource) {
-            const refSel = document.getElementById('ref-select');
-            const targetSel = document.getElementById('target-select');
-            let refKey = refSel.value;
-            let targetKey = targetSel.value;
+        function getPrimeFactors(num) {
+            let factors = {2:0, 3:0, 5:0, 7:0, 11:0};
+            let temp = num;
+            [2,3,5,7,11].forEach(p => {
+                while(temp % p === 0) { factors[p]++; temp /= p; }
+            });
+            return factors;
+        }
 
-            if (triggerSource === 'ref' && refKey === "Load SCL") {
-                activeSclTarget = 'ref';
-                document.getElementById('scl-file-input').click();
-                refSel.value = prevRefKey; 
-                return;
-            }
-            if (triggerSource === 'target' && targetKey === "Load SCL") {
-                activeSclTarget = 'target';
-                document.getElementById('scl-file-input').click();
-                targetSel.value = prevTargetKey; 
-                return;
-            }
+        function generateJIScale(limit) {
+            const isWithinLimit = (num) => {
+                let temp = num;
+                [2,3,5,7,11].forEach(p => { if (p <= limit) while (temp % p === 0) temp /= p; });
+                return temp === 1;
+            };
+            let scale = jiPool.filter(r => isWithinLimit(r.n) && isWithinLimit(r.d));
+            return scale.map(r => ({ ...r, cents: 1200 * Math.log2(r.n/r.d) })).sort((a,b) => a.cents - b.cents);
+        }
 
-            prevRefKey = refKey;
-            prevTargetKey = targetKey;
+        function updateTunings() {
+            const refKey = document.getElementById('ref-select').value;
+            const targetKey = document.getElementById('target-select').value;
 
-            const edoInputGroup = document.getElementById('edo-group');
+            document.getElementById('edo-group').style.display = (refKey === "Custom EDO" || targetKey === "Custom EDO") ? 'flex' : 'none';
+            document.getElementById('ji-group').style.display = (refKey === "Custom JI" || targetKey === "Custom JI") ? 'flex' : 'none';
+
             const customN = parseFloat(document.getElementById('edo-input').value) || 31;
+            const jiLimit = parseInt(document.getElementById('ji-limit').value) || 5;
 
-            if (refKey === "Custom EDO" || targetKey === "Custom EDO") {
-                edoInputGroup.style.display = 'flex';
-            } else {
-                edoInputGroup.style.display = 'none';
-            }
-
+            // Update Ref
             if (refKey === "Custom EDO") {
-                customRefEDO = generateEDO(customN);
-                currentRef = customRefEDO.array;
+                currentRef = Array.from({length: customN + 1}, (_, i) => i * (1200/customN));
+                refRatios = [];
+            } else if (refKey === "Custom JI") {
+                let jiScale = generateJIScale(jiLimit);
+                currentRef = jiScale.map(x => x.cents);
+                refRatios = jiScale;
             } else {
                 currentRef = tunings[refKey];
-                customRefEDO = null;
+                refRatios = [];
             }
 
+            // Update Target
             if (targetKey === "Custom EDO") {
-                customTargetEDO = generateEDO(customN);
-                currentTarget = customTargetEDO.array;
+                currentTarget = Array.from({length: customN + 1}, (_, i) => i * (1200/customN));
+                targetRatios = [];
+            } else if (targetKey === "Custom JI") {
+                let jiScale = generateJIScale(jiLimit);
+                currentTarget = jiScale.map(x => x.cents);
+                targetRatios = jiScale;
             } else {
                 currentTarget = tunings[targetKey];
-                customTargetEDO = null;
+                targetRatios = [];
             }
             
-            selectedRefIndex = Math.min(selectedRefIndex, currentRef.length - 1);
-            selectedTargetIndex = Math.min(selectedTargetIndex, currentTarget.length - 1);
-            draw();
+            // 切换调律库时，也自动吸附到刚才的意图锚点，防止下标越界或错位
+            selectedRefIndex = getNearestIndex(currentRef, anchorCents);
+            selectedTargetIndex = getNearestIndex(currentTarget, anchorCents);
         }
 
-        function parseSCL(text) {
-            const lines = text.split('\n').map(l => l.trim());
-            const dataLines = lines.filter(l => l.length > 0 && !l.startsWith('!'));
-            if(dataLines.length < 2) throw new Error("Invalid SCL");
-            
-            let description = dataLines[0];
-            const numNotes = parseInt(dataLines[1]);
-            const centsArray = [0]; 
-
-            for(let i = 0; i < numNotes; i++) {
-                const val = dataLines[2 + i];
-                if(!val) continue; 
-                const token = val.split(/\s+/)[0]; 
-                if(token.includes('.')) {
-                    centsArray.push(parseFloat(token));
-                } else {
-                    let n, d;
-                    if(token.includes('/')) {
-                        const parts = token.split('/');
-                        n = parseInt(parts[0]);
-                        d = parseInt(parts[1]);
-                    } else {
-                        n = parseInt(token);
-                        d = 1;
-                    }
-                    centsArray.push(1200 * Math.log2(n/d));
-                }
-            }
-            if (description.length > 20) description = description.substring(0, 20) + '...';
-            return { name: description, array: centsArray };
-        }
-
-        function handleSclUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                try {
-                    const parsed = parseSCL(evt.target.result);
-                    let name = parsed.name || file.name.replace('.scl', '');
-                    
-                    let counter = 1;
-                    let uniqueName = name;
-                    while(tunings[uniqueName]) {
-                        uniqueName = `${name} (${counter})`;
-                        counter++;
-                    }
-                    tunings[uniqueName] = parsed.array;
-
-                    const refSel = document.getElementById('ref-select');
-                    const targetSel = document.getElementById('target-select');
-                    
-                    const opt1 = document.createElement('option');
-                    opt1.value = uniqueName; opt1.text = uniqueName;
-                    const opt2 = document.createElement('option');
-                    opt2.value = uniqueName; opt2.text = uniqueName;
-
-                    refSel.insertBefore(opt1, refSel.options[refSel.options.length-2]);
-                    targetSel.insertBefore(opt2, targetSel.options[targetSel.options.length-2]);
-
-                    if (activeSclTarget === 'ref') {
-                        refSel.value = uniqueName;
-                        prevRefKey = uniqueName;
-                    } else if (activeSclTarget === 'target') {
-                        targetSel.value = uniqueName;
-                        prevTargetKey = uniqueName;
-                    }
-                    updateTunings(); 
-                } catch (err) {
-                    alert("Invalid or unsupported .scl file format.");
-                    console.error(err);
-                } finally {
-                    e.target.value = ''; 
-                }
-            };
-            reader.readAsText(file);
-        }
-        
         function toggleRatioFormat() {
             showDecimalRatio = !showDecimalRatio;
             document.getElementById('fmt-btn').innerText = showDecimalRatio ? 'Decimal' : 'Ratio';
-            draw();
         }
 
-        function resize() {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = document.getElementById('canvas-wrapper').clientHeight;
-            cx = width / 2;
-            cy = height / 2;
-            draw();
-        }
-
+        // Math utilities for Original UI
         function gcd(a, b) { return !b ? a : gcd(b, a % b); }
         function lcm(a, b) { return (a * b) / gcd(a, b); }
         
@@ -618,21 +516,11 @@
         }
 
         function getRatioText(cents, index, targetKey) {
-            if (showDecimalRatio) {
-                 const decimalRatio = Math.pow(2, cents / 1200);
-                 return decimalRatio.toFixed(4);
-            }
-
-            if (targetKey === "Custom EDO" && customTargetEDO) {
-                return `Step ${index}/${customTargetEDO.n}`;
-            }
-            
+            if (showDecimalRatio) return Math.pow(2, cents / 1200).toFixed(4);
             if (tuningFractions[targetKey] && tuningFractions[targetKey][index]) {
-                return tuningFractions[targetKey][index].replace(':', '/');
+                return tuningFractions[targetKey][index];
             }
-            
-            const decimalRatio = Math.pow(2, cents / 1200);
-            const rational = getRationalApproximation(decimalRatio, 5000);
+            const rational = getRationalApproximation(Math.pow(2, cents / 1200), 5000);
             return `${rational.n}/${rational.d}`;
         }
         
@@ -640,167 +528,197 @@
             if (totalLength > 13) return `${index}`; 
             return noteNames[index] || index;
         }
-        
+
         function getNearestRefCents(targetCents) {
             let nearest = currentRef[0];
             let minDiff = Math.abs(targetCents - nearest);
             for(let i=1; i<currentRef.length; i++) {
                 const diff = Math.abs(targetCents - currentRef[i]);
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    nearest = currentRef[i];
-                }
+                if (diff < minDiff) { minDiff = diff; nearest = currentRef[i]; }
             }
             return nearest;
         }
 
         function getCoincidenceIndex(cents, index, targetKey) {
             let rational = null;
-            if (targetKey !== "Custom EDO" && tuningFractions[targetKey] && tuningFractions[targetKey][index]) {
-                const fracStr = tuningFractions[targetKey][index];
-                if (fracStr.includes(':')) {
-                    const parts = fracStr.split(':');
-                    const n = parseInt(parts[0]);
-                    const d = parseInt(parts[1]);
-                    if (!isNaN(n) && !isNaN(d)) rational = { n: n, d: d };
-                }
+            if (tuningFractions[targetKey] && tuningFractions[targetKey][index]) {
+                const parts = tuningFractions[targetKey][index].split('/');
+                if (parts.length === 2) rational = { n: parseInt(parts[0]), d: parseInt(parts[1]) };
             }
-            if (!rational) {
-                const decimalRatio = Math.pow(2, cents/1200);
-                rational = getRationalApproximation(decimalRatio, 5000);
-            }
+            if (!rational) rational = getRationalApproximation(Math.pow(2, cents/1200), 5000);
             if (rational.n > 10000 || rational.d > 10000) return ">10k";
             return lcm(rational.n, rational.d);
         }
 
-        function draw() {
+        function renderLoop() {
+            if(!ctx) return;
             ctx.clearRect(0, 0, width, height);
-            drawAnalyzer();
+            
+            const rulerH = 80;
+            // 完美的 50% 垂直居中
+            const rulerY = (height * 0.5) - (rulerH / 2);
+            
+            // 1. Draw Overtone Spectrum (固定在 25% 的黄金分割线上)
+            drawOvertoneSpectrum(0, (height * 0.25) - 40, width, 80);
+            
+            // 2. Draw Main Ruler (50% 居中区)
+            drawAnalyzerRuler(0, rulerY, width, rulerH);
+            
+            // 3. Draw Topology Lattice (分配至下方的剩余 35% 空间)
+            const targetKey = document.getElementById('target-select').value;
+            const refKey = document.getElementById('ref-select').value;
+            if (targetKey === "Custom JI" || refKey === "Custom JI") {
+                const latticeStartY = height * 0.65;
+                drawLattice(0, latticeStartY, width, height * 0.35 - 70); // -70 预留给底部 Dock
+            }
+            
+            requestAnimationFrame(renderLoop);
         }
 
-        function drawAnalyzer() {
-            const rulerH = 80;
-            const rulerY = (height * 0.35) - (rulerH / 2); 
-            
-            const gap = 100; 
-            
-            const graphY = rulerY + rulerH + gap;
-            const bottomMargin = 100; 
-            const graphH = height - bottomMargin - graphY;
-            
-            drawAnalyzerRuler(0, rulerY, width, rulerH);
+        function drawOvertoneSpectrum(x, y, w, h) {
+            const axisY = y + h/2; 
+            const scaleW = w * 0.9; 
+            const padL = (w - scaleW)/2;
+            const maxCents = 5000; // Extended to fit 17f harmonics (~4904 cents)
+            const centsToX = (c) => padL + (c / maxCents) * scaleW;
 
-            const activeKey = activeTrack === 'ref' ? document.getElementById('ref-select').value : document.getElementById('target-select').value;
-            const cents = activeTrack === 'ref' ? currentRef[selectedRefIndex] : currentTarget[selectedTargetIndex];
-            const decimalRatio = Math.pow(2, cents/1200);
-            
-            let rational = null;
-            if (activeKey !== "Custom EDO" && tuningFractions[activeKey] && tuningFractions[activeKey][activeTrack === 'ref' ? selectedRefIndex : selectedTargetIndex]) {
-                const fracStr = tuningFractions[activeKey][activeTrack === 'ref' ? selectedRefIndex : selectedTargetIndex];
-                if (fracStr.includes(':')) {
-                    const parts = fracStr.split(':');
-                    const n = parseInt(parts[0]);
-                    const d = parseInt(parts[1]);
-                    if (!isNaN(n) && !isNaN(d)) rational = { n: n, d: d };
-                }
-            }
-            
-            if (!rational) {
-                rational = getRationalApproximation(decimalRatio, 5000);
+            ctx.save();
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(padL + scaleW, axisY); ctx.stroke();
+
+            const refCent = currentRef[selectedRefIndex];
+            const tgtCent = currentTarget[selectedTargetIndex];
+            const baseFreq = 261.63;
+            const fR = baseFreq * Math.pow(2, refCent/1200);
+            const fT = baseFreq * Math.pow(2, tgtCent/1200);
+
+            let refPts = [], tgtPts = [];
+            for(let n=1; n<=17; n++) {
+                refPts.push({n, c: refCent + 1200 * Math.log2(n), f: fR * n});
+                tgtPts.push({n, c: tgtCent + 1200 * Math.log2(n), f: fT * n});
             }
 
-            drawModule_Combined(0, graphY, width, graphH, rational, decimalRatio);
+            const time = Date.now() / 1000;
+
+            // Analyze and Draw Beating Connections
+            refPts.forEach(rp => {
+                tgtPts.forEach(tp => {
+                    const diffCents = Math.abs(rp.c - tp.c);
+                    if(diffCents < 60 && diffCents > 0.01) {
+                        const beatFreq = Math.abs(rp.f - tp.f);
+                        let alpha = 0.15;
+                        let lw = 1;
+                        
+                        if (beatFreq <= 15 && beatFreq > 0.1) {
+                            alpha = 0.2 + 0.6 * Math.abs(Math.sin(time * beatFreq * Math.PI));
+                            lw = 1.5;
+                        } else if (beatFreq <= 0.1) {
+                            alpha = 0.8; lw = 1.5;
+                        }
+
+                        const px = centsToX((rp.c + tp.c)/2);
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+                        ctx.lineWidth = lw;
+                        ctx.beginPath(); 
+                        ctx.moveTo(centsToX(rp.c), axisY - 10); 
+                        ctx.lineTo(centsToX(tp.c), axisY + 10); 
+                        ctx.stroke();
+
+                        if (beatFreq <= 15) {
+                            ctx.fillStyle = `rgba(200, 200, 200, ${Math.max(0.4, alpha)})`;
+                            ctx.font = '9px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+                            ctx.fillText(`${beatFreq.toFixed(1)}Hz`, px, axisY + 32);
+                        }
+                    }
+                });
+            });
+
+            // Draw Ref Harmonics (Solid Up)
+            refPts.forEach(pt => {
+                const px = centsToX(pt.c);
+                ctx.strokeStyle = `rgba(255,255,255, ${Math.max(0.1, 0.8 - pt.n*0.04)})`;
+                ctx.beginPath(); ctx.moveTo(px, axisY); ctx.lineTo(px, axisY - 15); ctx.stroke();
+                ctx.fillStyle = `rgba(255,255,255, ${Math.max(0.2, 0.9 - pt.n*0.04)})`;
+                ctx.font = '9px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                ctx.fillText(`${pt.n}f`, px, axisY - 18);
+            });
+
+            // Draw Target Harmonics (Dashed Down)
+            tgtPts.forEach(pt => {
+                const px = centsToX(pt.c);
+                ctx.strokeStyle = `rgba(180,180,180, ${Math.max(0.1, 0.8 - pt.n*0.04)})`;
+                ctx.setLineDash([2,2]);
+                ctx.beginPath(); ctx.moveTo(px, axisY); ctx.lineTo(px, axisY + 15); ctx.stroke();
+                ctx.fillStyle = `rgba(180,180,180, ${Math.max(0.2, 0.9 - pt.n*0.04)})`;
+                ctx.font = '9px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+                ctx.fillText(`${pt.n}f`, px, axisY + 18);
+            });
+            
+            ctx.setLineDash([]);
+            ctx.restore();
         }
 
         function drawAnalyzerRuler(x, y, w, h) {
             ctx.save();
-            ctx.beginPath(); ctx.rect(x, y - 120, w, h + 250); 
-            ctx.clip();
-            
             const axisY = y + h/2; 
             const maxCentsTarget = Math.max(1200, ...currentTarget);
             const maxCentsRef = Math.max(1200, ...currentRef);
-            const maxCents = Math.max(maxCentsTarget, maxCentsRef);
+            const maxCents = Math.max(maxCentsTarget, maxCentsRef); 
             const scaleW = w * 0.9; 
             const padL = (w - scaleW)/2;
             const centsToX = (c) => padL + (c / maxCents) * scaleW;
 
             const refKey = document.getElementById('ref-select').value;
+            const targetKey = document.getElementById('target-select').value;
 
             ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(padL + scaleW, axisY); ctx.stroke();
 
+            // Draw Ref Track (Up)
             currentRef.forEach((cents, i) => {
                 const px = centsToX(cents);
                 const isSelected = (activeTrack === 'ref' && selectedRefIndex === i);
-                const isHovered = (hoveredTrack === 'ref' && hoveredIndex === i);
                 
                 if (isSelected) {
                     ctx.fillStyle = '#fff'; ctx.fillRect(px-1.5, axisY-20, 3, 20);
-                } else if (isHovered) {
-                    ctx.fillStyle = '#aaa'; ctx.fillRect(px-1, axisY-16, 2, 16);
                 } else {
                     ctx.fillStyle = '#888'; ctx.fillRect(px-0.5, axisY-12, 1, 8);
                 }
 
-                ctx.fillStyle = (isSelected || isHovered) ? '#fff' : '#bbb'; 
-                ctx.font = (isSelected || isHovered) ? 'bold 10px -apple-system' : '10px -apple-system'; 
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'bottom';
-                if (currentRef.length <= 20 || i%5===0 || i===currentRef.length-1 || isSelected || isHovered) {
+                ctx.fillStyle = isSelected ? '#fff' : '#bbb'; 
+                ctx.font = isSelected ? 'bold 10px -apple-system' : '10px -apple-system'; 
+                ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                
+                if (currentRef.length <= 20 || i%5===0 || i===currentRef.length-1 || isSelected) {
                     ctx.fillText(getLabelName(i, currentRef.length), px, axisY - (isSelected ? 24 : 20));
                 }
 
-                if (isSelected || isHovered) {
-                    drawLabelUp(px, axisY - 40, cents, i, refKey, isSelected || isHovered);
-                }
+                if (isSelected) drawLabelUp(px, axisY - 40, cents, i, refKey);
             });
 
-            const targetKey = document.getElementById('target-select').value;
-            const isDense = currentTarget.length > 20;
-
+            // Draw Target Track (Down)
             currentTarget.forEach((cents, i) => {
                 const px = centsToX(cents);
-                let diff;
-                if (currentTarget.length === currentRef.length) diff = cents - currentRef[i];
-                else diff = cents - getNearestRefCents(cents);
-
+                let diff = cents - getNearestRefCents(cents);
                 const color = getErrorColor(diff);
                 const isSelected = (activeTrack === 'target' && selectedTargetIndex === i);
-                const isHovered = (hoveredTrack === 'target' && hoveredIndex === i);
                 
                 if (isSelected) {
                     ctx.fillStyle = '#fff'; ctx.fillRect(px-1.5, axisY, 3, 20);
-                } else if (isHovered) {
-                    ctx.fillStyle = color; ctx.fillRect(px-1, axisY, 2, 16); 
                 } else {
                     ctx.fillStyle = color; ctx.fillRect(px-0.5, axisY, 1, 10); 
                 }
 
-                if (isSelected || isHovered || (!isDense && (Math.abs(diff) > 2 || displayMode !== 'cents'))) {
-                     const txtColor = getTextColor(diff);
-                     drawLabel(px, axisY + 30, diff, cents, i, targetKey, txtColor, isSelected || isHovered);
+                if (isSelected || currentTarget.length <= 20) {
+                    const txtColor = getTextColor(diff);
+                    drawLabel(px, axisY + 30, diff, cents, i, targetKey, txtColor, isSelected);
                 }
             });
             ctx.restore();
         }
 
-        function drawModule_Combined(x, y, w, h, rational, decimalRatio) {
-            const pad = 40; const chartW = w - pad*2;
-            const cx = x + pad; const cy = y + 20; 
-            
-            const m = rational.n;
-            const textY = y + h - 10; 
-
-            ctx.textAlign = 'left';
-            ctx.fillStyle = '#888'; ctx.font = '10px -apple-system';
-            ctx.fillText("HARMONIC LOCK", cx, textY - 25);
-            
-            let lockColor = (m <= 24) ? '#32d74b' : '#ff453a';
-            ctx.fillStyle = lockColor; ctx.font = '24px -apple-system';
-            ctx.fillText(`#${m}`, cx, textY);
-        }
-
+        // Exact restoration of user's original Label Drawing functions
         function drawLabel(x, y, diff, cents, index, targetKey, color, isHovered) {
             ctx.textAlign = 'center'; ctx.textBaseline = 'top'; 
             
@@ -824,14 +742,14 @@
             ctx.fillText(`C.I. ${ci}`, x, y + 38);
         }
 
-        function drawLabelUp(x, y, cents, index, key, isHovered) {
+        function drawLabelUp(x, y, cents, index, key) {
             ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; 
             
             const absLabel = cents.toFixed(1);
             const ratioLabel = getRatioText(cents, index, key);
             const ci = getCoincidenceIndex(cents, index, key);
             
-            ctx.font = isHovered ? 'bold 12px -apple-system' : '500 11px -apple-system';
+            ctx.font = 'bold 12px -apple-system';
             ctx.fillStyle = '#fff';
             ctx.fillText(ratioLabel, x, y);
             
@@ -843,137 +761,111 @@
             ctx.fillText(`C.I. ${ci}`, x, y - 26);
         }
 
-        function handleMouseMove(e) {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+        function drawLattice(x, y, w, h) {
+            const ratios = activeTrack === 'ref' && document.getElementById('ref-select').value === "Custom JI" ? refRatios : 
+                           (document.getElementById('target-select').value === "Custom JI" ? targetRatios : []);
             
-            if (mouseY > height - 80) return;
+            if (ratios.length === 0) return;
 
-            const rulerH = 80;
-            const rulerY = (height * 0.35) - (rulerH / 2); 
-            const axisY = rulerY + rulerH/2;
-            
-            if (mouseY > rulerY - 40 && mouseY < rulerY + rulerH + 60) {
-                const maxCentsTarget = Math.max(1200, ...currentTarget);
-                const maxCentsRef = Math.max(1200, ...currentRef);
-                const maxCents = Math.max(maxCentsTarget, maxCentsRef);
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Mathematics of Isometric Projection for Primes (Anchored Absolute Layout)
+            const nodes = ratios.map((r, i) => {
+                let fn = getPrimeFactors(r.n);
+                let fd = getPrimeFactors(r.d);
+                let p3 = fn[3] - fd[3];
+                let p5 = fn[5] - fd[5];
+                let p7 = fn[7] - fd[7];
+                let p11 = fn[11] - fd[11];
                 
-                const scaleW = width * 0.9;
-                const padL = (width - scaleW)/2;
-                let minDist = 20;
-                let foundIndex = -1;
-                let foundTrack = null;
-
-                if (mouseY < axisY) {
-                    currentRef.forEach((cents, i) => {
-                        const x = padL + (cents/maxCents) * scaleW;
-                        if (Math.abs(mouseX - x) < minDist) { minDist = Math.abs(mouseX - x); foundIndex = i; foundTrack = 'ref'; }
-                    });
-                } else {
-                    currentTarget.forEach((cents, i) => {
-                        const x = padL + (cents/maxCents) * scaleW;
-                        if (Math.abs(mouseX - x) < minDist) { minDist = Math.abs(mouseX - x); foundIndex = i; foundTrack = 'target'; }
-                    });
-                }
+                let nx = p3 * 1.0 + p5 * 0.5 + p7 * -0.5 + p11 * 0;
+                let ny = p3 * 0.0 + p5 * -0.866 + p7 * -0.866 + p11 * -1.2;
                 
-                if (foundIndex !== hoveredIndex || foundTrack !== hoveredTrack) { 
-                    hoveredIndex = foundIndex; 
-                    hoveredTrack = foundTrack;
-                    
-                    // 光标悬停时直接更新激活轨道并严格只播放该音高
-                    if (hoveredIndex !== -1 && hoveredTrack !== null) {
-                        activeTrack = hoveredTrack;
-                        if (activeTrack === 'ref') {
-                            selectedRefIndex = hoveredIndex;
-                        } else {
-                            selectedTargetIndex = hoveredIndex;
-                        }
-                        // 需要用户进行过至少一次点击交互（解锁音频上下文）后，才能在 hover 时触发播放
-                        if (audioCtx && audioCtx.state === 'running') {
-                            playActiveTone();
-                        }
-                    }
-                    draw(); 
-                }
-                tooltip.style.opacity = 0;
-                return;
-            } else {
-                if (hoveredIndex !== -1) {
-                    hoveredIndex = -1;
-                    hoveredTrack = null;
-                    draw();
-                }
-            }
-        }
-
-        function handleClick(e) {
-            if (hoveredIndex === -1 || hoveredTrack === null) return;
-            activeTrack = hoveredTrack;
-            if (activeTrack === 'ref') {
-                selectedRefIndex = hoveredIndex;
-            } else {
-                selectedTargetIndex = hoveredIndex;
-            }
-            draw();
-            playActiveTone();
-        }
-        
-        function stopAllOscs() {
-            currentOscs.forEach(o => {
-                try {
-                    o.osc.stop();
-                    o.osc.disconnect();
-                    o.gain.disconnect();
-                } catch(err) {}
+                return { ...r, index: i, nx, ny, p3, p5, p7, p11 };
             });
-            currentOscs = [];
-        }
 
-        function playActiveTone() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            
-            stopAllOscs(); // 每次播放新音高前，立刻停止旧的声音，避免重叠造成听觉混淆
-            
-            const baseFreq = 261.63; // C4
-            
-            // 严格确保只计算和播放当前激活轨道所对应的音高
-            let freq;
-            if (activeTrack === 'ref') {
-                freq = baseFreq * Math.pow(2, currentRef[selectedRefIndex] / 1200);
-            } else {
-                freq = baseFreq * Math.pow(2, currentTarget[selectedTargetIndex] / 1200);
-            }
+            // Calculate exact bounding box to auto-fit the whole lattice perfectly
+            let minX = Math.min(...nodes.map(n => n.nx));
+            let maxX = Math.max(...nodes.map(n => n.nx));
+            let minY = Math.min(...nodes.map(n => n.ny));
+            let maxY = Math.max(...nodes.map(n => n.ny));
 
-            // 使用 'triangle' (三角波) 替代 'sine'。
-            // 纯正弦波缺乏泛音，人耳极难分辨微小音分差异。三角波丰富的泛音能让你清晰听到上下刻度切换时的音准变化。
-            playOsc(freq, 'triangle', 0, 1.0); 
-        }
+            const spanX = Math.max(maxX - minX, 1);
+            const spanY = Math.max(maxY - minY, 1);
+            
+            const pad = 40;
+            const scaleX = (w - pad * 2) / spanX;
+            const scaleY = (h - pad * 2) / spanY;
+            const scale = Math.min(scaleX, scaleY, 70); // Max scale limit
 
-        function playOsc(freq, type, delay, duration) {
-            const osc = audioCtx.createOscillator(); 
-            const gain = audioCtx.createGain();
-            
-            osc.type = type; 
-            osc.frequency.value = freq;
-            
-            gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
-            gain.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + delay + 0.05); // 稍微提高一点听觉增益
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
-            
-            osc.connect(gain); 
-            gain.connect(audioCtx.destination);
-            
-            osc.start(audioCtx.currentTime + delay); 
-            
-            currentOscs.push({osc: osc, gain: gain});
-            
-            // 定时清理播放完的振荡器
-            setTimeout(() => {
-                const index = currentOscs.findIndex(o => o.osc === osc);
-                if (index > -1) currentOscs.splice(index, 1);
-            }, (duration + 0.1) * 1000);
+            const cx = w / 2;
+            const cy = h / 2;
+            const midX = (minX + maxX) / 2;
+            const midY = (minY + maxY) / 2;
+
+            // Draw Edges
+            nodes.forEach(n1 => {
+                nodes.forEach(n2 => {
+                    const diff3 = Math.abs(n1.p3 - n2.p3);
+                    const diff5 = Math.abs(n1.p5 - n2.p5);
+                    const diff7 = Math.abs(n1.p7 - n2.p7);
+                    const diff11 = Math.abs(n1.p11 - n2.p11);
+                    
+                    if (diff3 + diff5 + diff7 + diff11 === 1) { // 1 Prime distance
+                        const px1 = cx + (n1.nx - midX) * scale;
+                        const py1 = cy + (n1.ny - midY) * scale;
+                        const px2 = cx + (n2.nx - midX) * scale;
+                        const py2 = cy + (n2.ny - midY) * scale;
+                        
+                        ctx.beginPath(); ctx.moveTo(px1, py1); ctx.lineTo(px2, py2);
+                        
+                        if (diff3 === 1) { ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.setLineDash([]); ctx.lineWidth = 1.5; }
+                        else if (diff5 === 1) { ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.setLineDash([4,4]); ctx.lineWidth = 1; }
+                        else if (diff7 === 1) { ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.setLineDash([1,3]); ctx.lineWidth = 1;}
+                        else { ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.setLineDash([1,6]); ctx.lineWidth = 1; }
+                        
+                        ctx.stroke();
+                    }
+                });
+            });
+            ctx.setLineDash([]);
+
+            // Draw Nodes with clear N/D text (去圆圈化，纯文字发光)
+            nodes.forEach(n => {
+                const px = cx + (n.nx - midX) * scale;
+                const py = cy + (n.ny - midY) * scale;
+                
+                const isSelected = (activeTrack === 'ref' ? selectedRefIndex : selectedTargetIndex) === n.index;
+                const text = `${n.n}/${n.d}`;
+                
+                ctx.font = isSelected ? 'bold 16px -apple-system' : '13px -apple-system';
+                
+                // 绘制底层微小纯黑遮罩，切断连线以保证字体纯净可读
+                ctx.save();
+                const txtW = ctx.measureText(text).width;
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(px - txtW/2 - 4, py - 10, txtW + 8, 20);
+                ctx.restore();
+
+                if (isSelected) {
+                    const time = Date.now() / 1000;
+                    const pulse = 0.6 + 0.4 * Math.sin(time * 3);
+                    
+                    ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
+                    ctx.shadowColor = `rgba(255, 255, 255, ${pulse * 0.8})`;
+                    ctx.shadowBlur = 10;
+                } else {
+                    ctx.fillStyle = '#888';
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(text, px, py);
+                ctx.shadowBlur = 0; // 重置阴影避免污染其他渲染
+            });
+
+            ctx.restore();
         }
 
         init();
