@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MICRULER - Minimalist</title>
+    <title>MICRULER - Minimalist 3D</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Global Minimalist Black */
@@ -204,12 +204,15 @@
         <div class="divider"></div>
         <div class="control-group">
             <label>&nbsp;</label>
+            <button class="toggle-btn" onclick="document.getElementById('scl-file-input').click()">+ SCL</button>
+        </div>
+        <div class="control-group">
+            <label>&nbsp;</label>
             <button class="toggle-btn" id="fmt-btn" onclick="toggleRatioFormat()">Ratio</button>
         </div>
     </div>
 
     <script>
-        // --- Core Tuning Data ---
         const standardTunings = {
             "12-TET": [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200],
             "Just Intonation": [0, 111.73, 203.91, 315.64, 386.31, 498.04, 590.22, 701.96, 813.69, 884.36, 996.09, 1088.27, 1200],
@@ -230,7 +233,6 @@
         let currentRef = tunings["12-TET"];
         let currentTarget = tunings["Pythagorean"];
         
-        // Custom JI Generator Database (Primes up to 11)
         const jiPool = [
             {n:1, d:1}, {n:256, d:243}, {n:16, d:15}, {n:10, d:9}, {n:9, d:8}, {n:8, d:7}, {n:7, d:6},
             {n:32, d:27}, {n:6, d:5}, {n:5, d:4}, {n:81, d:64}, {n:9, d:7}, {n:21, d:16}, {n:4, d:3},
@@ -244,30 +246,42 @@
         let customRefEDO = null; 
         let customTargetEDO = null;
 
-        // Interaction State
         let activeTrack = 'target'; 
         let selectedRefIndex = 0;
         let selectedTargetIndex = 7;
-        let anchorCents = 700; // 新增：记录用户明确选择的意图音分，解决上下切换时吸附不对齐的问题
+        let anchorCents = 700; 
         
         let showDecimalRatio = false; 
         let audioCtx;
-        let currentOscs = []; // Global tracking to prevent clipping
+        let currentOscs = []; 
 
         const canvas = document.getElementById('rulerCanvas');
         const ctx = canvas.getContext('2d');
         let width, height;
+
+        // --- 3D Lattice State Variables ---
+        let latticeRotX = 0.3; // 还原为经典的斜上方俯瞰视角 (使Y轴/5-limit垂直向上)
+        let latticeRotY = -0.5; // 方位角适配，使X轴(3-limit)向右上方延展，Z轴(7-limit)向右下
+        let isDraggingLattice = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let isAutoRotating = false; // 关闭自动旋转，以确保网格关系的绝对清晰（可手动拖拽）
 
         function init() {
             populateSelects();
             resize();
             window.addEventListener('resize', resize);
             
-            // Interaction Hooks
-            canvas.addEventListener('mousedown', handleClick);
+            // Interaction Hooks Setup (Upgraded for 3D Dragging)
+            canvas.addEventListener('mousedown', handleMouseDown);
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
+            window.addEventListener('touchmove', handleTouchMove, {passive: false});
+            window.addEventListener('touchend', handleMouseUp);
+            
             window.addEventListener('keydown', handleKeyDown);
             
-            // Start Global Render Loop (Drives the beating animation)
             requestAnimationFrame(renderLoop);
         }
 
@@ -276,17 +290,121 @@
             height = canvas.height = document.getElementById('canvas-wrapper').clientHeight;
         }
 
+        // Mouse & Touch Handlers
+        function handleMouseDown(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseY = e.clientY - rect.top;
+            const mouseX = e.clientX - rect.left;
+            
+            const targetKey = document.getElementById('target-select').value;
+            const refKey = document.getElementById('ref-select').value;
+            const hasLattice = targetKey === "Custom JI" || refKey === "Custom JI";
+            const latticeStartY = height * 0.50;
+
+            // If user clicks in the bottom half and lattice is active, enable 3D rotation
+            if (hasLattice && mouseY > latticeStartY) {
+                isDraggingLattice = true;
+                isAutoRotating = false; // Disable auto-rotation to allow manual inspection
+                lastMouseX = mouseX;
+                lastMouseY = mouseY;
+            } else {
+                // Otherwise run the original logic for Ruler note selection
+                handleClickLogic(mouseX, mouseY);
+            }
+        }
+
+        function handleMouseMove(e) {
+            if (isDraggingLattice) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Rotate based on mouse drag delta
+                latticeRotY += (mouseX - lastMouseX) * 0.008;
+                latticeRotX += (mouseY - lastMouseY) * 0.008;
+                
+                lastMouseX = mouseX;
+                lastMouseY = mouseY;
+            }
+        }
+
+        function handleMouseUp() {
+            isDraggingLattice = false;
+        }
+
+        function handleTouchStart(e) {
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const mouseY = touch.clientY - rect.top;
+                const mouseX = touch.clientX - rect.left;
+                
+                const targetKey = document.getElementById('target-select').value;
+                const refKey = document.getElementById('ref-select').value;
+                const hasLattice = targetKey === "Custom JI" || refKey === "Custom JI";
+                const latticeStartY = height * 0.50;
+
+                if (hasLattice && mouseY > latticeStartY) {
+                    isDraggingLattice = true;
+                    isAutoRotating = false;
+                    lastMouseX = mouseX;
+                    lastMouseY = mouseY;
+                    e.preventDefault(); 
+                } else {
+                    handleClickLogic(mouseX, mouseY);
+                }
+            }
+        }
+
+        function handleTouchMove(e) {
+            if (isDraggingLattice && e.touches.length > 0) {
+                e.preventDefault(); // Prevent page scrolling during 3D rotation
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = touch.clientX - rect.left;
+                const mouseY = touch.clientY - rect.top;
+                
+                latticeRotY += (mouseX - lastMouseX) * 0.008;
+                latticeRotX += (mouseY - lastMouseY) * 0.008;
+                
+                lastMouseX = mouseX;
+                lastMouseY = mouseY;
+            }
+        }
+
+        // Original Selection Logic abstracted out to be called by mouse/touch securely
+        function handleClickLogic(mouseX, mouseY) {
+            const rulerH = 80;
+            const rulerY = (height * 0.35) - (rulerH / 2);
+            const axisY = rulerY + rulerH/2;
+
+            const scaleW = width * 0.9; 
+            const padL = (width - scaleW)/2;
+            const maxCents = Math.max(Math.max(...currentRef), Math.max(...currentTarget));
+            const clickedCents = ((mouseX - padL) / scaleW) * maxCents;
+
+            if (mouseY < axisY) {
+                activeTrack = 'ref';
+                selectedRefIndex = getNearestIndex(currentRef, clickedCents);
+                anchorCents = currentRef[selectedRefIndex];
+            } else {
+                activeTrack = 'target';
+                selectedTargetIndex = getNearestIndex(currentTarget, clickedCents);
+                anchorCents = currentTarget[selectedTargetIndex];
+            }
+            playTone();
+        }
+
         function playTone() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
             
-            const baseFreq = 261.63; // C4
+            const baseFreq = 261.63; 
             const cents = activeTrack === 'ref' ? currentRef[selectedRefIndex] : currentTarget[selectedTargetIndex];
             const freq = baseFreq * Math.pow(2, cents / 1200);
 
             const now = audioCtx.currentTime;
             
-            // Immediately stop previous oscillators to prevent clicking/clipping
             currentOscs.forEach(o => {
                 try {
                     o.gain.gain.cancelScheduledValues(now);
@@ -296,23 +414,18 @@
             });
             currentOscs = [];
 
-            // 1. 创建合成器与音量控制，新增滤波器(Filter)以提升质感
             const osc = audioCtx.createOscillator(); 
             const gain = audioCtx.createGain();
             const filter = audioCtx.createBiquadFilter();
             
-            // 2. 核心改动：使用锯齿波(sawtooth)。它拥有最完整的奇偶泛音列，能让人耳极其敏锐地捕捉微音分差异。
             osc.type = 'sawtooth'; 
             osc.frequency.value = freq;
             
-            // 加入低通滤波，削掉过于尖锐的高频，让声音温润（模拟模拟合成器的质感）
             filter.type = 'lowpass';
             filter.frequency.setValueAtTime(2500, now);
             
-            // 3. 核心改动：延长 Sustain 包络
             gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.3, now + 0.02); // 柔和的起音 Attack
-            // 衰减时间从 0.3s 延长到了 0.7s (多出了 0.4s 的 Sustain 延音)
+            gain.gain.linearRampToValueAtTime(0.3, now + 0.02); 
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7); 
             
             osc.connect(filter); 
@@ -320,7 +433,7 @@
             gain.connect(audioCtx.destination);
             
             osc.start(now); 
-            osc.stop(now + 0.8); // 配合延音，将强制切断时间也延后
+            osc.stop(now + 0.8); 
             
             currentOscs.push({osc, gain});
         }
@@ -334,62 +447,34 @@
 
             if (e.key === 'ArrowUp') {
                 activeTrack = 'ref';
-                selectedRefIndex = getNearestIndex(currentRef, anchorCents); // 使用意图锚点垂直对齐
+                selectedRefIndex = getNearestIndex(currentRef, anchorCents); 
                 play = true;
             } else if (e.key === 'ArrowDown') {
                 activeTrack = 'target';
-                selectedTargetIndex = getNearestIndex(currentTarget, anchorCents); // 使用意图锚点垂直对齐
+                selectedTargetIndex = getNearestIndex(currentTarget, anchorCents); 
                 play = true;
             } else if (e.key === 'ArrowLeft') {
                 if (activeTrack === 'ref' && selectedRefIndex > 0) { 
                     selectedRefIndex--; 
-                    anchorCents = currentRef[selectedRefIndex]; // 更新横向意图
+                    anchorCents = currentRef[selectedRefIndex]; 
                     play = true; 
                 } else if (activeTrack === 'target' && selectedTargetIndex > 0) { 
                     selectedTargetIndex--; 
-                    anchorCents = currentTarget[selectedTargetIndex]; // 更新横向意图
+                    anchorCents = currentTarget[selectedTargetIndex]; 
                     play = true; 
                 }
             } else if (e.key === 'ArrowRight') {
                 if (activeTrack === 'ref' && selectedRefIndex < currentRef.length - 1) { 
                     selectedRefIndex++; 
-                    anchorCents = currentRef[selectedRefIndex]; // 更新横向意图
+                    anchorCents = currentRef[selectedRefIndex]; 
                     play = true; 
                 } else if (activeTrack === 'target' && selectedTargetIndex < currentTarget.length - 1) { 
                     selectedTargetIndex++; 
-                    anchorCents = currentTarget[selectedTargetIndex]; // 更新横向意图
+                    anchorCents = currentTarget[selectedTargetIndex]; 
                     play = true; 
                 }
             }
             if (play) playTone();
-        }
-
-        function handleClick(e) {
-            const rect = canvas.getBoundingClientRect();
-            const mouseY = e.clientY - rect.top;
-            const mouseX = e.clientX - rect.left;
-            
-            // Calculate Ruler Bounds (Sync with renderLoop at 35%)
-            const rulerH = 80;
-            const rulerY = (height * 0.35) - (rulerH / 2);
-            const axisY = rulerY + rulerH/2;
-
-            const scaleW = width * 0.9; 
-            const padL = (width - scaleW)/2;
-            const maxCents = Math.max(Math.max(...currentRef), Math.max(...currentTarget));
-            const clickedCents = ((mouseX - padL) / scaleW) * maxCents;
-
-            // Global Click Hit Test (Upper half = Ref, Lower half = Target)
-            if (mouseY < axisY) {
-                activeTrack = 'ref';
-                selectedRefIndex = getNearestIndex(currentRef, clickedCents);
-                anchorCents = currentRef[selectedRefIndex]; // 更新横向意图
-            } else {
-                activeTrack = 'target';
-                selectedTargetIndex = getNearestIndex(currentTarget, clickedCents);
-                anchorCents = currentTarget[selectedTargetIndex]; // 更新横向意图
-            }
-            playTone();
         }
 
         function getNearestIndex(arr, targetVal) {
@@ -449,7 +534,6 @@
             const customN = parseFloat(document.getElementById('edo-input').value) || 31;
             const jiLimit = parseInt(document.getElementById('ji-limit').value) || 5;
 
-            // Update Ref
             if (refKey === "Custom EDO") {
                 currentRef = Array.from({length: customN + 1}, (_, i) => i * (1200/customN));
                 refRatios = [];
@@ -462,7 +546,6 @@
                 refRatios = [];
             }
 
-            // Update Target
             if (targetKey === "Custom EDO") {
                 currentTarget = Array.from({length: customN + 1}, (_, i) => i * (1200/customN));
                 targetRatios = [];
@@ -475,7 +558,6 @@
                 targetRatios = [];
             }
             
-            // 切换调律库时，也自动吸附到刚才的意图锚点，防止下标越界或错位
             selectedRefIndex = getNearestIndex(currentRef, anchorCents);
             selectedTargetIndex = getNearestIndex(currentTarget, anchorCents);
         }
@@ -485,7 +567,65 @@
             document.getElementById('fmt-btn').innerText = showDecimalRatio ? 'Decimal' : 'Ratio';
         }
 
-        // Math utilities for Original UI
+        // --- SCL File Parser ---
+        function handleSclUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                // Parse Scala format: Ignore comments starting with '!'
+                const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0 && !l.startsWith('!'));
+                
+                if (lines.length < 2) return;
+                
+                const numNotes = parseInt(lines[1]);
+                let centsArray = [0]; // Scala format implies 1/1 root at 0 cents
+                
+                for (let i = 2; i < Math.min(lines.length, numNotes + 2); i++) {
+                    let val = lines[i].split(/\s+/)[0]; 
+                    if (val.includes('.')) {
+                        // Cents value
+                        centsArray.push(parseFloat(val));
+                    } else if (val.includes('/')) {
+                        // Ratio value
+                        let parts = val.split('/');
+                        let n = parseFloat(parts[0]);
+                        let d = parseFloat(parts[1]);
+                        if (d !== 0) centsArray.push(1200 * Math.log2(n / d));
+                    } else {
+                        // Integer means n/1
+                        let n = parseInt(val);
+                        if (!isNaN(n)) centsArray.push(1200 * Math.log2(n));
+                    }
+                }
+                
+                // Add to Tuning Dictionary
+                const tuningName = file.name.replace('.scl', '');
+                tunings[tuningName] = centsArray;
+                
+                // Add Options to Select Dropdowns
+                const targetSel = document.getElementById('target-select');
+                const refSel = document.getElementById('ref-select');
+                
+                // Insert right before custom EDO/JI options
+                let insertIdx = Array.from(targetSel.options).findIndex(o => o.value === "Custom EDO");
+                if (insertIdx === -1) insertIdx = targetSel.options.length;
+
+                targetSel.add(new Option(tuningName, tuningName), insertIdx);
+                refSel.add(new Option(tuningName, tuningName), insertIdx);
+                
+                // Auto Select the uploaded tuning
+                targetSel.value = tuningName;
+                updateTunings();
+                
+                // Reset file input
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
         function gcd(a, b) { return !b ? a : gcd(b, a % b); }
         function lcm(a, b) { return (a * b) / gcd(a, b); }
         
@@ -555,21 +695,17 @@
             ctx.clearRect(0, 0, width, height);
             
             const rulerH = 80;
-            // Shifted upwards to 35% height
             const rulerY = (height * 0.35) - (rulerH / 2);
             
-            // 1. Draw Overtone Spectrum (Shifted upwards to 15% height)
             drawOvertoneSpectrum(0, (height * 0.15) - 40, width, 80);
-            
-            // 2. Draw Main Ruler (Shifted upwards)
             drawAnalyzerRuler(0, rulerY, width, rulerH);
             
-            // 3. Draw Topology Lattice (Expanded to take bottom 50%)
+            // Draw 3D Topology Lattice
             const targetKey = document.getElementById('target-select').value;
             const refKey = document.getElementById('ref-select').value;
             if (targetKey === "Custom JI" || refKey === "Custom JI") {
-                const latticeStartY = height * 0.50; // Starts precisely at the middle
-                const dockReserve = 100; // Leaves 100px absolutely clear for the bottom dock
+                const latticeStartY = height * 0.50; 
+                const dockReserve = 100; 
                 drawLattice(0, latticeStartY, width, height * 0.50 - dockReserve); 
             }
             
@@ -580,11 +716,10 @@
             const axisY = y + h/2; 
             const scaleW = w * 0.9; 
             const padL = (w - scaleW)/2;
-            const maxCents = 5000; // Extended to fit 17f harmonics (~4904 cents)
+            const maxCents = 5000; 
             const centsToX = (c) => padL + (c / maxCents) * scaleW;
 
             ctx.save();
-
             ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(padL + scaleW, axisY); ctx.stroke();
 
@@ -602,7 +737,6 @@
 
             const time = Date.now() / 1000;
 
-            // Analyze and Draw Beating Connections
             refPts.forEach(rp => {
                 tgtPts.forEach(tp => {
                     const diffCents = Math.abs(rp.c - tp.c);
@@ -635,7 +769,6 @@
                 });
             });
 
-            // Draw Ref Harmonics (Solid Up)
             refPts.forEach(pt => {
                 const px = centsToX(pt.c);
                 ctx.strokeStyle = `rgba(255,255,255, ${Math.max(0.1, 0.8 - pt.n*0.04)})`;
@@ -645,7 +778,6 @@
                 ctx.fillText(`${pt.n}f`, px, axisY - 18);
             });
 
-            // Draw Target Harmonics (Dashed Down)
             tgtPts.forEach(pt => {
                 const px = centsToX(pt.c);
                 ctx.strokeStyle = `rgba(180,180,180, ${Math.max(0.1, 0.8 - pt.n*0.04)})`;
@@ -676,7 +808,6 @@
             ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(padL, axisY); ctx.lineTo(padL + scaleW, axisY); ctx.stroke();
 
-            // Draw Ref Track (Up)
             currentRef.forEach((cents, i) => {
                 const px = centsToX(cents);
                 const isSelected = (activeTrack === 'ref' && selectedRefIndex === i);
@@ -698,7 +829,6 @@
                 if (isSelected) drawLabelUp(px, axisY - 40, cents, i, refKey);
             });
 
-            // Draw Target Track (Down)
             currentTarget.forEach((cents, i) => {
                 const px = centsToX(cents);
                 let diff = cents - getNearestRefCents(cents);
@@ -719,7 +849,6 @@
             ctx.restore();
         }
 
-        // Exact restoration of user's original Label Drawing functions
         function drawLabel(x, y, diff, cents, index, targetKey, color, isHovered) {
             ctx.textAlign = 'center'; ctx.textBaseline = 'top'; 
             
@@ -771,8 +900,8 @@
             ctx.save();
             ctx.translate(x, y);
 
-            // Mathematics of Isometric Projection for Primes (Anchored Absolute Layout)
-            const nodes = ratios.map((r, i) => {
+            // 1. Logical Cartesian Mapping (Strict Orthogonal Mapping)
+            let nodes3D = ratios.map((r, i) => {
                 let fn = getPrimeFactors(r.n);
                 let fd = getPrimeFactors(r.d);
                 let p3 = fn[3] - fd[3];
@@ -780,94 +909,148 @@
                 let p7 = fn[7] - fd[7];
                 let p11 = fn[11] - fd[11];
                 
-                // Optimized spatial projection to untangle prime overlap (V-shape + straight down)
-                let nx = p3 * 1.0 + p5 * 0.5 + p7 * -0.5 + p11 * 0.0;
-                let ny = p3 * 0.0 + p5 * -0.866 + p7 * -0.866 + p11 * 1.0;
+                // 将不同质数严格分配给不同维度，11限制使用斜向偏移防止重叠
+                // 拉伸乘数：将 X (3-Limit) 和 Z (7-Limit) 的距离拉长，让网格更加舒展
+                let X = (p3 + p11 * 0.7) * 1.6;
+                let Y = (p5 - p11 * 0.4) * 1.2;
+                let Z = (p7 + p11 * 0.9) * 1.6;
                 
-                return { ...r, index: i, nx, ny, p3, p5, p7, p11 };
+                return { ...r, index: i, X, Y, Z, p3, p5, p7, p11 };
             });
 
-            // Calculate exact bounding box to auto-fit the whole lattice perfectly
-            let minX = Math.min(...nodes.map(n => n.nx));
-            let maxX = Math.max(...nodes.map(n => n.nx));
-            let minY = Math.min(...nodes.map(n => n.ny));
-            let maxY = Math.max(...nodes.map(n => n.ny));
+            // 2. Orthographic Rotation (等角正交旋转，消除透视畸变，保证平行线绝对平行)
+            let cosY = Math.cos(latticeRotY);
+            let sinY = Math.sin(latticeRotY);
+            let cosX = Math.cos(latticeRotX);
+            let sinX = Math.sin(latticeRotX);
 
-            const spanX = Math.max(maxX - minX, 1);
-            const spanY = Math.max(maxY - minY, 1);
-            
-            const pad = Math.min(60, w * 0.05); // Dynamic padding
+            nodes3D.forEach(n => {
+                let x1 = n.X * cosY - n.Z * sinY;
+                let z1 = n.X * sinY + n.Z * cosY;
+                
+                let y2 = n.Y * cosX - z1 * sinX;
+                let z2 = n.Y * sinX + z1 * cosX;
+
+                n.orthoX = x1;
+                n.orthoY = y2;
+                n.orthoZ = z2; // 仅用于深度排序，不参与透视除法
+            });
+
+            // 3. Dynamic Auto-Scaling (完美适配屏幕大小)
+            let minX = Math.min(...nodes3D.map(n => n.orthoX));
+            let maxX = Math.max(...nodes3D.map(n => n.orthoX));
+            let minY = Math.min(...nodes3D.map(n => n.orthoY));
+            let maxY = Math.max(...nodes3D.map(n => n.orthoY));
+
+            let spanX = maxX - minX || 1;
+            let spanY = maxY - minY || 1;
+            let cx3D = (minX + maxX) / 2;
+            let cy3D = (minY + maxY) / 2;
+
+            // 减小留白 (Padding) 使得整体图形更大
+            const pad = Math.min(40, w * 0.05); 
             const scaleX = (w - pad * 2) / spanX;
             const scaleY = (h - pad * 2) / spanY;
-            const scale = Math.min(scaleX, scaleY, 80); // Increased max scale for legibility
+            // 全局缩放增加 1.15 倍乘数，进一步拉长视觉上的节点间距
+            const scale = Math.min(scaleX, scaleY) * 1.15; 
 
-            const cx = w / 2;
-            const cy = h / 2;
-            const midX = (minX + maxX) / 2;
-            const midY = (minY + maxY) / 2;
+            const cx2D = w / 2;
+            const cy2D = h / 2;
 
-            // Draw Edges
-            nodes.forEach(n1 => {
-                nodes.forEach(n2 => {
-                    const diff3 = Math.abs(n1.p3 - n2.p3);
-                    const diff5 = Math.abs(n1.p5 - n2.p5);
-                    const diff7 = Math.abs(n1.p7 - n2.p7);
-                    const diff11 = Math.abs(n1.p11 - n2.p11);
-                    
-                    if (diff3 + diff5 + diff7 + diff11 === 1) { // 1 Prime distance
-                        const px1 = cx + (n1.nx - midX) * scale;
-                        const py1 = cy + (n1.ny - midY) * scale;
-                        const px2 = cx + (n2.nx - midX) * scale;
-                        const py2 = cy + (n2.ny - midY) * scale;
-                        
-                        ctx.beginPath(); ctx.moveTo(px1, py1); ctx.lineTo(px2, py2);
-                        
-                        if (diff3 === 1) { ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.setLineDash([]); ctx.lineWidth = 1.5; }
-                        else if (diff5 === 1) { ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.setLineDash([4,4]); ctx.lineWidth = 1; }
-                        else if (diff7 === 1) { ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.setLineDash([1,3]); ctx.lineWidth = 1;}
-                        else { ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.setLineDash([1,6]); ctx.lineWidth = 1; }
-                        
-                        ctx.stroke();
-                    }
-                });
+            nodes3D.forEach(n => {
+                n.px = cx2D + (n.orthoX - cx3D) * scale;
+                n.py = cy2D - (n.orthoY - cy3D) * scale; // Canvas Y轴反转
             });
-            ctx.setLineDash([]);
 
-            // Draw Nodes with adaptive text sizing
-            const baseFontSize = Math.max(9, Math.min(14, scale * 0.35)); // Dynamic font scaling based on density
+            // 4. Edges Generation and Depth Sorting
+            let edges = [];
+            for (let i = 0; i < nodes3D.length; i++) {
+                for (let j = i + 1; j < nodes3D.length; j++) {
+                    let n1 = nodes3D[i];
+                    let n2 = nodes3D[j];
+                    let diff3 = Math.abs(n1.p3 - n2.p3);
+                    let diff5 = Math.abs(n1.p5 - n2.p5);
+                    let diff7 = Math.abs(n1.p7 - n2.p7);
+                    let diff11 = Math.abs(n1.p11 - n2.p11);
+                    
+                    if (diff3 + diff5 + diff7 + diff11 === 1) {
+                        let type = diff3 ? 3 : (diff5 ? 5 : (diff7 ? 7 : 11));
+                        let avgZ = (n1.orthoZ + n2.orthoZ) / 2;
+                        edges.push({ n1, n2, type, avgZ });
+                    }
+                }
+            }
 
-            nodes.forEach(n => {
-                const px = cx + (n.nx - midX) * scale;
-                const py = cy + (n.ny - midY) * scale;
+            // 从后往前绘制，处理遮挡关系
+            edges.sort((a, b) => a.avgZ - b.avgZ);
+            nodes3D.sort((a, b) => a.orthoZ - b.orthoZ);
+
+            let minZ = edges[0]?.avgZ || 0;
+            let maxZ = edges[edges.length - 1]?.avgZ || 1;
+            let rangeZ = maxZ - minZ || 1;
+
+            // 5. Draw Edges (复刻 Wilsonic 干净利落的实线风格)
+            ctx.lineJoin = 'round';
+            edges.forEach(e => {
+                ctx.beginPath();
+                ctx.moveTo(e.n1.px, e.n1.py);
+                ctx.lineTo(e.n2.px, e.n2.py);
                 
+                // 仅保留轻微的深度褪色，保持网格清晰
+                let depthAlpha = 0.3 + 0.7 * ((e.avgZ - minZ) / rangeZ);
+                if (isNaN(depthAlpha)) depthAlpha = 1;
+
+                ctx.setLineDash([]); 
+                if (e.type === 3) { 
+                    ctx.strokeStyle = `rgba(200, 200, 200, ${depthAlpha})`; 
+                    ctx.lineWidth = 1.5; 
+                }
+                else if (e.type === 5) { 
+                    ctx.strokeStyle = `rgba(64, 156, 255, ${depthAlpha})`; 
+                    ctx.lineWidth = 1.5; 
+                }
+                else if (e.type === 7) { 
+                    ctx.strokeStyle = `rgba(255, 69, 58, ${depthAlpha})`; 
+                    ctx.lineWidth = 1.5; 
+                }
+                else { 
+                    ctx.strokeStyle = `rgba(50, 215, 75, ${depthAlpha})`; 
+                    ctx.lineWidth = 1.5; 
+                }
+                ctx.stroke();
+            });
+
+            // 6. Draw Nodes (复刻 Wilsonic：小圆点 + 侧边镂空文字)
+            nodes3D.forEach(n => {
                 const isSelected = (activeTrack === 'ref' ? selectedRefIndex : selectedTargetIndex) === n.index;
                 const text = `${n.n}/${n.d}`;
                 
-                ctx.font = isSelected ? `bold ${baseFontSize + 3}px -apple-system` : `${baseFontSize}px -apple-system`;
-                
-                // Tighter background mask to prevent eating neighboring nodes when crowded
-                ctx.save();
-                const txtW = ctx.measureText(text).width;
-                ctx.fillStyle = '#000000';
-                const maskH = baseFontSize + 6;
-                ctx.fillRect(px - txtW/2 - 2, py - maskH/2, txtW + 4, maskH);
-                ctx.restore();
-
+                // 绘制顶点小圆点
+                ctx.beginPath();
+                ctx.arc(n.px, n.py, isSelected ? 4.5 : 3, 0, Math.PI * 2);
+                ctx.fillStyle = isSelected ? '#ffffff' : '#aaaaaa';
                 if (isSelected) {
-                    const time = Date.now() / 1000;
-                    const pulse = 0.6 + 0.4 * Math.sin(time * 3);
-                    
-                    ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
-                    ctx.shadowColor = `rgba(255, 255, 255, ${pulse * 0.8})`;
-                    ctx.shadowBlur = 10;
-                } else {
-                    ctx.fillStyle = '#888';
-                    ctx.shadowBlur = 0;
+                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowBlur = 12;
                 }
+                ctx.fill();
+                ctx.shadowBlur = 0; // 重置阴影
 
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(text, px, py);
-                ctx.shadowBlur = 0; // 重置阴影避免污染其他渲染
+                // 绘制侧边偏移文字
+                ctx.font = isSelected ? 'bold 13px -apple-system' : '11px -apple-system';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                
+                const textX = n.px + 6;
+                const textY = n.py - 6;
+
+                // 描边效果：切除文字背后的线条，确保绝对可读性
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3.5;
+                ctx.strokeText(text, textX, textY);
+
+                ctx.fillStyle = isSelected ? '#ffffff' : '#cccccc';
+                ctx.fillText(text, textX, textY);
             });
 
             ctx.restore();
