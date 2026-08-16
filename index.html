@@ -369,9 +369,9 @@
             const mouseY = e.clientY - rect.top;
             const mouseX = e.clientX - rect.left;
             
-            // Calculate Ruler Bounds
+            // Calculate Ruler Bounds (Sync with renderLoop at 35%)
             const rulerH = 80;
-            const rulerY = (height * 0.5) - (rulerH / 2);
+            const rulerY = (height * 0.35) - (rulerH / 2);
             const axisY = rulerY + rulerH/2;
 
             const scaleW = width * 0.9; 
@@ -555,21 +555,22 @@
             ctx.clearRect(0, 0, width, height);
             
             const rulerH = 80;
-            // 完美的 50% 垂直居中
-            const rulerY = (height * 0.5) - (rulerH / 2);
+            // Shifted upwards to 35% height
+            const rulerY = (height * 0.35) - (rulerH / 2);
             
-            // 1. Draw Overtone Spectrum (固定在 25% 的黄金分割线上)
-            drawOvertoneSpectrum(0, (height * 0.25) - 40, width, 80);
+            // 1. Draw Overtone Spectrum (Shifted upwards to 15% height)
+            drawOvertoneSpectrum(0, (height * 0.15) - 40, width, 80);
             
-            // 2. Draw Main Ruler (50% 居中区)
+            // 2. Draw Main Ruler (Shifted upwards)
             drawAnalyzerRuler(0, rulerY, width, rulerH);
             
-            // 3. Draw Topology Lattice (分配至下方的剩余 35% 空间)
+            // 3. Draw Topology Lattice (Expanded to take bottom 50%)
             const targetKey = document.getElementById('target-select').value;
             const refKey = document.getElementById('ref-select').value;
             if (targetKey === "Custom JI" || refKey === "Custom JI") {
-                const latticeStartY = height * 0.65;
-                drawLattice(0, latticeStartY, width, height * 0.35 - 70); // -70 预留给底部 Dock
+                const latticeStartY = height * 0.50; // Starts precisely at the middle
+                const dockReserve = 100; // Leaves 100px absolutely clear for the bottom dock
+                drawLattice(0, latticeStartY, width, height * 0.50 - dockReserve); 
             }
             
             requestAnimationFrame(renderLoop);
@@ -779,8 +780,9 @@
                 let p7 = fn[7] - fd[7];
                 let p11 = fn[11] - fd[11];
                 
-                let nx = p3 * 1.0 + p5 * 0.5 + p7 * -0.5 + p11 * 0;
-                let ny = p3 * 0.0 + p5 * -0.866 + p7 * -0.866 + p11 * -1.2;
+                // Optimized spatial projection to untangle prime overlap (V-shape + straight down)
+                let nx = p3 * 1.0 + p5 * 0.5 + p7 * -0.5 + p11 * 0.0;
+                let ny = p3 * 0.0 + p5 * -0.866 + p7 * -0.866 + p11 * 1.0;
                 
                 return { ...r, index: i, nx, ny, p3, p5, p7, p11 };
             });
@@ -794,10 +796,10 @@
             const spanX = Math.max(maxX - minX, 1);
             const spanY = Math.max(maxY - minY, 1);
             
-            const pad = 40;
+            const pad = Math.min(60, w * 0.05); // Dynamic padding
             const scaleX = (w - pad * 2) / spanX;
             const scaleY = (h - pad * 2) / spanY;
-            const scale = Math.min(scaleX, scaleY, 70); // Max scale limit
+            const scale = Math.min(scaleX, scaleY, 80); // Increased max scale for legibility
 
             const cx = w / 2;
             const cy = h / 2;
@@ -831,7 +833,9 @@
             });
             ctx.setLineDash([]);
 
-            // Draw Nodes with clear N/D text (去圆圈化，纯文字发光)
+            // Draw Nodes with adaptive text sizing
+            const baseFontSize = Math.max(9, Math.min(14, scale * 0.35)); // Dynamic font scaling based on density
+
             nodes.forEach(n => {
                 const px = cx + (n.nx - midX) * scale;
                 const py = cy + (n.ny - midY) * scale;
@@ -839,13 +843,14 @@
                 const isSelected = (activeTrack === 'ref' ? selectedRefIndex : selectedTargetIndex) === n.index;
                 const text = `${n.n}/${n.d}`;
                 
-                ctx.font = isSelected ? 'bold 16px -apple-system' : '13px -apple-system';
+                ctx.font = isSelected ? `bold ${baseFontSize + 3}px -apple-system` : `${baseFontSize}px -apple-system`;
                 
-                // 绘制底层微小纯黑遮罩，切断连线以保证字体纯净可读
+                // Tighter background mask to prevent eating neighboring nodes when crowded
                 ctx.save();
                 const txtW = ctx.measureText(text).width;
                 ctx.fillStyle = '#000000';
-                ctx.fillRect(px - txtW/2 - 4, py - 10, txtW + 8, 20);
+                const maskH = baseFontSize + 6;
+                ctx.fillRect(px - txtW/2 - 2, py - maskH/2, txtW + 4, maskH);
                 ctx.restore();
 
                 if (isSelected) {
